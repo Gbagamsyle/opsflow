@@ -24,7 +24,9 @@ export class WebhooksController {
     @Req() request: RawBodyRequest,
     @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
-    const signingSecret = process.env['CLERK_WEBHOOK_SIGNING_SECRET'];
+    const signingSecret =
+      process.env['CLERK_WEBHOOK_SECRET'] ??
+      process.env['CLERK_WEBHOOK_SIGNING_SECRET'];
 
     if (!signingSecret) {
       throw new Error('CLERK_WEBHOOK_SIGNING_SECRET is not configured');
