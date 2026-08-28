@@ -5,26 +5,50 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { AuthService } from './auth.service';
+import { verifyToken } from '@clerk/backend';
+import { UsersService } from '../users/users.service';
 
 export interface AuthenticatedRequest extends Request {
-  auth?: Awaited<ReturnType<AuthService['verifyAccessToken']>>;
+  auth?: Awaited<ReturnType<typeof verifyToken>>;
+  user?: Awaited<ReturnType<UsersService['findByClerkId']>>;
 }
 
 @Injectable()
 export class ClerkGuard implements CanActivate {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly usersService: UsersService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const authorization = request.headers.authorization;
-    const [scheme, token] = authorization?.split(' ') ?? [];
+    const authHeader = request.headers.authorization;
 
-    if (scheme?.toLowerCase() !== 'bearer' || !token) {
-      throw new UnauthorizedException('Bearer token is required');
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Missing authentication token');
     }
 
-    request.auth = await this.authService.verifyAccessToken(token);
-    return true;
+    const token = authHeader.substring(7);
+
+    try {
+      const payload = await verifyToken(token, {
+        secretKey: process.env['CLERK_SECRET_KEY'],
+      });
+      const clerkUserId = payload.sub;
+      const dbUser = await this.usersService.findByClerkId(clerkUserId);
+
+      if (!dbUser) {
+        throw new UnauthorizedException(
+          'User account has not been synchronized',
+        );
+      }
+
+      request.auth = payload;
+      request.user = dbUser;
+      return true;
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      throw new UnauthorizedException('Invalid authentication token');
+    }
   }
 }

@@ -32,4 +32,26 @@ export class UsersService {
       data,
     });
   }
+
+  async upsertFromClerk(data: {
+    clerkUserId: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string;
+  }) {
+    const { clerkUserId, ...userData } = data;
+
+    return this.prisma.user.upsert({
+      where: { clerkUserId },
+      create: data,
+      update: userData,
+    });
+  }
+
+  async removeByClerkId(clerkUserId: string) {
+    return this.prisma.user.delete({
+      where: { clerkUserId },
+    });
+  }
 }

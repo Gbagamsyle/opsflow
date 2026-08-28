@@ -4,6 +4,6 @@ import { AuthenticatedRequest } from '../clerk.guard';
 export const CurrentUser = createParamDecorator(
   (_data: unknown, context: ExecutionContext) => {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    return request.auth;
+    return request.user;
   },
 );
