@@ -25,6 +25,7 @@ export class WebhooksController {
     @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
     const signingSecret =
+      process.env['CLERK_SIGNING_SECRET'] ??
       process.env['CLERK_WEBHOOK_SECRET'] ??
       process.env['CLERK_WEBHOOK_SIGNING_SECRET'];
 
