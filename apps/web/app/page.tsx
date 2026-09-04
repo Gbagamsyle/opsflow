@@ -1,69 +1,76 @@
-import Image from "next/image";
+"use client";
+
+import { useAuth } from "@clerk/nextjs";
+import { ArrowUpRight, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 import styles from "./page.module.css";
 
+type Organization = { id: string; name: string; slug: string };
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+function makeSlug(name: string) {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const slug = makeSlug(name);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    void (async () => {
+      const token = await getToken();
+      const response = await fetch(`${API_URL}/organizations`, { headers: { Authorization: `Bearer ${token}` } });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.message ?? "We could not load your workspace.");
+      setOrganizations(body);
+      setLoading(false);
+    })().catch((reason: unknown) => {
+      setError(reason instanceof Error ? reason.message : "Something went wrong.");
+      setLoading(false);
+    });
+  }, [getToken, isLoaded, isSignedIn]);
+
+  async function createOrganization(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      const token = await getToken();
+      const response = await fetch(`${API_URL}/organizations`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), slug: makeSlug(name) }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.message ?? "We could not create your workspace.");
+      router.push("/dashboard");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (!isLoaded || (isSignedIn && loading)) return <main className={styles.page}><p className={styles.status}>Preparing your workspace...</p></main>;
+  if (!isSignedIn) return <main className={styles.page}><Link className={styles.authLink} href="/auth">Sign in to continue <span>{"->"}</span></Link></main>;
+
+  return <main className={styles.page}><section className={styles.shell}>
+    <div className={styles.eyebrow}><span className={styles.brand}><span className={styles.mark}>O</span> OPSFLOW</span><span className={styles.headerNote}>YOUR OPERATIONS SPACE</span></div>
+      <div className={styles.content}>
+        <div className={styles.intro}><p className={styles.kicker}>Workspace setup</p><h1>{organizations.length > 0 ? <>Your workspaces,<br /><em>all in one place.</em></> : <>Build a home<br />for <em>good work.</em></>}</h1><p className={styles.lede}>{organizations.length > 0 ? "You already have a workspace ready. Open it, or create a new space for another team." : "A focused space for your projects, people, and the momentum between them."}</p></div>
+        {organizations.length > 0 && <div className={styles.existing}><p className={styles.sectionLabel}>Your workspaces</p>{organizations.map((organization) => <Link className={styles.organization} href="/dashboard" key={organization.id}><span>{organization.name.slice(0, 1).toUpperCase()}</span><div><strong>{organization.name}</strong><small>{organization.slug}</small></div><ArrowUpRight className={styles.rowIcon} aria-hidden="true" /></Link>)}</div>}
+        <form onSubmit={createOrganization} className={styles.form}><div className={styles.formTitle}><span>{organizations.length > 0 ? "New workspace" : "Name your workspace"}</span><small>Free to start</small></div><label htmlFor="workspace">Workspace name</label><div className={styles.inputRow}><input id="workspace" required minLength={2} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Syle Tech" autoComplete="organization" /><button disabled={submitting || !slug}>{submitting ? "Creating..." : "Create workspace"}<ArrowUpRight size={17} aria-hidden="true" /></button></div><div className={styles.inputMeta}><small>{slug ? `opsflow.local / ${slug}` : "Your name becomes a simple workspace address"}</small>{slug && <span>Available</span>}</div>{error && <p className={styles.error} role="alert">{error}</p>}</form>
+        <div className={styles.promise}><Sparkles size={18} aria-hidden="true" /><p><strong>Everything in one rhythm.</strong><br />Projects, tasks, clients, and invoices live together.</p></div>
+      </div><footer><span>Built for teams that move with intent.</span><span>© 2026 OPSFLOW</span></footer>
+  </section></main>;
 }

@@ -5,6 +5,8 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { ProjectsModule } from './projects/projects.module';
+import { ClientsModule } from './clients/clients.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     UsersModule,
     OrganizationsModule,
     WebhooksModule,
+    ProjectsModule,
+    ClientsModule,
   ],
   controllers: [HealthController],
 })
