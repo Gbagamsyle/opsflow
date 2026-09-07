@@ -2,81 +2,1270 @@
 
 import { useAuth, useUser } from "@clerk/nextjs";
 import {
-  ArrowUpRight,
+  AlertCircle,
   BriefcaseBusiness,
+  Building2,
+  Calendar,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
-  CircleDollarSign,
+  Clock,
+  Flame,
   FolderKanban,
+  Layers,
+  LayoutGrid,
+  List,
   Plus,
+  Search,
   Sparkles,
+  TrendingUp,
   UsersRound,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import styles from "./dashboard.module.css";
 
-type Organization = { id: string; name: string; slug: string; plan?: string };
-type Project = { id: string; name: string; status: string; dueDate?: string | null; client?: { name: string } | null };
-type Client = { id: string; name: string; companyName?: string | null; status: string };
+type Organization = {
+  id: string;
+  name: string;
+  slug: string;
+  plan?: string;
+};
+
+type Project = {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: "PLANNING" | "ACTIVE" | "ON_HOLD" | "COMPLETED";
+  priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  dueDate?: string | null;
+  startDate?: string | null;
+  progress?: number;
+  tasksCount?: number;
+  tasksDone?: number;
+  client?: { id: string; name: string; companyName?: string | null } | null;
+};
+
+type Client = {
+  id: string;
+  name: string;
+  companyName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  status: "LEAD" | "ACTIVE" | "PAST";
+  projectsCount?: number;
+};
+
+type ActivityItem = {
+  id: string;
+  title: string;
+  time: string;
+  type: "project" | "client" | "task" | "system";
+};
+
+type TriageItem = {
+  id: string;
+  title: string;
+  desc: string;
+  urgency: "urgent" | "normal";
+  actionText: string;
+};
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const ACTIVITY_READ_KEY = "opsflow-recent-activity-read";
+
+// Rich Demo Operations Data Preset
+const DEMO_PROJECTS: Project[] = [
+  {
+    id: "demo-1",
+    name: "Apex Mobile Architecture 2.0",
+    description: "Core iOS and Android infrastructure migration with offline sync engines.",
+    status: "ACTIVE",
+    priority: "URGENT",
+    dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 80,
+    tasksCount: 10,
+    tasksDone: 8,
+    client: { id: "c-1", name: "Elena Rostova", companyName: "Acme Health Technologies" },
+  },
+  {
+    id: "demo-2",
+    name: "Brand Design System & Tokens",
+    description: "Unified component library tokens, dark mode palette, and Figma sync pipeline.",
+    status: "ACTIVE",
+    priority: "HIGH",
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 65,
+    tasksCount: 16,
+    tasksDone: 11,
+    client: { id: "c-2", name: "Marcus Vance", companyName: "Northwind Studio" },
+  },
+  {
+    id: "demo-3",
+    name: "Enterprise Multi-Tenant Migration",
+    description: "Database partitioning, Redis cache layer, and SOC-2 audit trails.",
+    status: "PLANNING",
+    priority: "MEDIUM",
+    dueDate: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 30,
+    tasksCount: 12,
+    tasksDone: 4,
+    client: { id: "c-3", name: "Sarah Lin", companyName: "Vertex Logix" },
+  },
+  {
+    id: "demo-4",
+    name: "Customer Onboarding Portal MVP",
+    description: "Self-service invite system, SSO setup, and billing portal webhooks.",
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 100,
+    tasksCount: 14,
+    tasksDone: 14,
+    client: { id: "c-4", name: "David Kim", companyName: "Aurora Labs" },
+  },
+];
+
+const DEMO_CLIENTS: Client[] = [
+  {
+    id: "c-1",
+    name: "Elena Rostova",
+    companyName: "Acme Health Technologies",
+    email: "elena@acmehealth.io",
+    status: "ACTIVE",
+    projectsCount: 2,
+  },
+  {
+    id: "c-2",
+    name: "Marcus Vance",
+    companyName: "Northwind Studio",
+    email: "marcus@northwind.design",
+    status: "ACTIVE",
+    projectsCount: 1,
+  },
+  {
+    id: "c-3",
+    name: "Sarah Lin",
+    companyName: "Vertex Logix",
+    email: "slin@vertexlogix.com",
+    status: "LEAD",
+    projectsCount: 1,
+  },
+  {
+    id: "c-4",
+    name: "David Kim",
+    companyName: "Aurora Labs",
+    email: "david@auroralabs.co",
+    status: "PAST",
+    projectsCount: 1,
+  },
+];
+
+const DEMO_ACTIVITY: ActivityItem[] = [
+  {
+    id: "act-1",
+    title: "Elena signed off on Milestone 2 for Apex Mobile",
+    time: "12m ago",
+    type: "project",
+  },
+  {
+    id: "act-2",
+    title: "Marcus reviewed Design System token specifications",
+    time: "48m ago",
+    type: "task",
+  },
+  {
+    id: "act-3",
+    title: "New client Vertex Logix onboarded as Lead partner",
+    time: "2h ago",
+    type: "client",
+  },
+  {
+    id: "act-4",
+    title: "Customer Onboarding Portal MVP marked Completed",
+    time: "5h ago",
+    type: "system",
+  },
+];
+
+const DEMO_TRIAGE: TriageItem[] = [
+  {
+    id: "tr-1",
+    title: "Apex Mobile 2.0 release candidate due in 3 days",
+    desc: "Final QA checklist and staging deployment approval required.",
+    urgency: "urgent",
+    actionText: "Review Milestone",
+  },
+  {
+    id: "tr-2",
+    title: "1 client statement pending signature",
+    desc: "Northwind Studio design token scope expansion.",
+    urgency: "normal",
+    actionText: "Open Statement",
+  },
+  {
+    id: "tr-3",
+    title: "Confirm timeline with Vertex Logix",
+    desc: "Multi-tenant cloud migration kickoff meeting scheduled for Friday.",
+    urgency: "normal",
+    actionText: "Send Agenda",
+  },
+];
 
 export default function Dashboard() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
+
+  // Data states
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+  const [realProjects, setRealProjects] = useState<Project[]>([]);
+  const [realClients, setRealClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Demo Toggle Mode
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isActivityExpanded, setIsActivityExpanded] = useState(true);
+  const [hasUnreadActivity, setHasUnreadActivity] = useState(() =>
+    typeof window === "undefined" || window.localStorage.getItem(ACTIVITY_READ_KEY) !== "true"
+  );
+
+  // View Mode: 'list' | 'cards' | 'timeline'
+  const [viewMode, setViewMode] = useState<"list" | "cards" | "timeline">("list");
+
+  // Filtering & Search
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Modal Dialogs
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [modalSubmitting, setModalSubmitting] = useState(false);
+  const [modalError, setModalError] = useState("");
+
+  // Project Form
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [newProjectClientId, setNewProjectClientId] = useState("");
+  const [newProjectStatus, setNewProjectStatus] = useState<string>("ACTIVE");
+  const [newProjectDueDate, setNewProjectDueDate] = useState("");
+
+  // Client Form
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientCompany, setNewClientCompany] = useState("");
+  const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientStatus, setNewClientStatus] = useState<string>("ACTIVE");
+
+  // Fetch real data on mount
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
-    void (async () => {
-      const token = await getToken();
-      const headers = { Authorization: `Bearer ${token}` };
-      const organizationResponse = await fetch(`${API_URL}/organizations`, { headers });
-      const organizationBody = await organizationResponse.json().catch(() => null);
-      if (!organizationResponse.ok) throw new Error(organizationBody?.message ?? "We could not load your workspace.");
-      setOrganizations(organizationBody);
-      const organization = organizationBody[0] as Organization | undefined;
-      if (organization) {
-        const [projectResponse, clientResponse] = await Promise.all([
-          fetch(`${API_URL}/organizations/${organization.id}/projects`, { headers }),
-          fetch(`${API_URL}/organizations/${organization.id}/clients`, { headers }),
-        ]);
-        const [projectBody, clientBody] = await Promise.all([
-          projectResponse.json().catch(() => null),
-          clientResponse.json().catch(() => null),
-        ]);
-        if (!projectResponse.ok) throw new Error(projectBody?.message ?? "We could not load your projects.");
-        if (!clientResponse.ok) throw new Error(clientBody?.message ?? "We could not load your clients.");
-        setProjects(projectBody);
-        setClients(clientBody);
+
+    let isMounted = true;
+
+    async function loadWorkspaceData() {
+      try {
+        const token = await getToken();
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const orgResponse = await fetch(`${API_URL}/organizations`, { headers });
+        const orgBody = await orgResponse.json().catch(() => null);
+
+        if (!orgResponse.ok) {
+          throw new Error(orgBody?.message ?? "We could not load your workspace.");
+        }
+
+        if (!isMounted) return;
+        setOrganizations(orgBody);
+
+        const currentOrg = orgBody[0] as Organization | undefined;
+        if (currentOrg) {
+          setSelectedOrgId(currentOrg.id);
+
+          const [projRes, clientRes] = await Promise.all([
+            fetch(`${API_URL}/organizations/${currentOrg.id}/projects`, { headers }),
+            fetch(`${API_URL}/organizations/${currentOrg.id}/clients`, { headers }),
+          ]);
+
+          const [projBody, clientBody] = await Promise.all([
+            projRes.json().catch(() => []),
+            clientRes.json().catch(() => []),
+          ]);
+
+          if (isMounted) {
+            const fetchedProjects = Array.isArray(projBody) ? projBody : [];
+            const fetchedClients = Array.isArray(clientBody) ? clientBody : [];
+            setRealProjects(fetchedProjects);
+            setRealClients(fetchedClients);
+
+            // If the workspace is empty, automatically enable demo view so the dashboard looks stunning
+            if (fetchedProjects.length === 0 && fetchedClients.length === 0) {
+              setIsDemoMode(true);
+            }
+          }
+        }
+      } catch (err: unknown) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Failed to load dashboard data.");
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      setLoading(false);
-    })().catch((reason: unknown) => {
-      setError(reason instanceof Error ? reason.message : "Something went wrong.");
-      setLoading(false);
-    });
+    }
+
+    void loadWorkspaceData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [getToken, isLoaded, isSignedIn]);
 
-  const activeProjects = useMemo(() => projects.filter((project) => project.status !== "COMPLETED"), [projects]);
-  const workspace = organizations[0];
-  const firstName = user?.firstName ?? "there";
+  useEffect(() => {
+    const collapseTimer = window.setTimeout(() => setIsActivityExpanded(false), 4500);
 
-  if (!isLoaded || (isSignedIn && loading)) return null;
-  if (!isSignedIn) return <div className={styles.loadingState}><Link href="/auth">Sign in to continue</Link></div>;
+    return () => window.clearTimeout(collapseTimer);
+  }, []);
 
-  return <>
-    <header className={styles.dashboardHeader}><div><p className={styles.overline}>Thursday, September 3, 2026 <span className={styles.headerDot}>•</span> Week 36</p><h1>Good morning, {firstName}.</h1></div><Link className={styles.primaryAction} href="/"><Plus size={16} aria-hidden="true" /> New project</Link></header>
-    <div className={styles.workspaceBar}><div><span className={styles.workspaceMark}>{workspace?.name.slice(0, 1).toUpperCase() ?? "O"}</span><div><strong>{workspace?.name ?? "Your workspace"}</strong><small>{workspace?.plan ?? "FREE"} plan</small></div><ChevronDown size={15} aria-hidden="true" /></div><Link href="/">Switch workspace <ArrowUpRight size={15} aria-hidden="true" /></Link></div>
-    {error ? <p className={styles.error} role="alert">{error}</p> : <>
-      <section className={styles.hero}><div><p className={styles.overline}>Workspace overview</p><h2>Keep the whole<br /><em>picture moving.</em></h2></div><div className={styles.heroAside}><p>Everything important, in one clear rhythm.</p><div className={styles.heroMeta}><span className={styles.liveDot} /> All systems operational</div></div></section>
-      <section className={styles.stats}><article><div className={styles.statLabel}><FolderKanban size={15} aria-hidden="true" /> Active projects</div><strong>{activeProjects.length}</strong><small>{activeProjects.length ? "Projects in motion" : "Ready to take shape"}<ArrowUpRight size={13} aria-hidden="true" /></small></article><article><div className={styles.statLabel}><UsersRound size={15} aria-hidden="true" /> Client relationships</div><strong>{clients.length}</strong><small>{clients.length ? "People in your orbit" : "Your first relationship awaits"}<ArrowUpRight size={13} aria-hidden="true" /></small></article><article><div className={styles.statLabel}><CircleDollarSign size={15} aria-hidden="true" /> Workspace plan</div><strong>{workspace?.plan ?? "FREE"}</strong><small>Built to grow with your team<ArrowUpRight size={13} aria-hidden="true" /></small></article></section>
-      <section className={styles.dashboardGrid}><div className={styles.activityPanel}><div className={styles.panelHeader}><div><p className={styles.overline}>Work in motion</p><h3>{activeProjects.length ? "Current projects" : "Start your first project"}</h3></div><Link href="/" aria-label="Create project"><Plus size={16} aria-hidden="true" /></Link></div>{activeProjects.length ? activeProjects.slice(0, 4).map((project) => <div className={styles.listRow} key={project.id}><span className={styles.rowGlyph}><FolderKanban size={15} aria-hidden="true" /></span><div><strong>{project.name}</strong><small>{project.client?.name ?? "No client assigned"}</small></div><b>{project.status.replace("_", " ")}</b></div>) : <div className={styles.panelEmpty}><span className={styles.emptyIcon}><BriefcaseBusiness size={18} aria-hidden="true" /></span><p>Give your team a shared place to turn intentions into finished work.</p><Link href="/">Create a project <ArrowUpRight size={14} aria-hidden="true" /></Link></div>}</div><div className={styles.activityPanel}><div className={styles.panelHeader}><div><p className={styles.overline}>People in your orbit</p><h3>{clients.length ? "Recent clients" : "Build your client list"}</h3></div><Link href="/" aria-label="Add client"><Plus size={16} aria-hidden="true" /></Link></div>{clients.length ? clients.slice(0, 4).map((client) => <div className={styles.listRow} key={client.id}><span className={styles.rowGlyph}><UsersRound size={15} aria-hidden="true" /></span><div><strong>{client.name}</strong><small>{client.companyName ?? "Independent client"}</small></div><b>{client.status}</b></div>) : <div className={styles.panelEmpty}><span className={styles.emptyIcon}><UsersRound size={18} aria-hidden="true" /></span><p>Keep client details close and the next conversation clear.</p><Link href="/">Add a client <ArrowUpRight size={14} aria-hidden="true" /></Link></div>}</div></section>
-      <section className={styles.bottomRow}><div className={styles.nextMove}><div className={styles.nextMoveIcon}><Sparkles size={17} aria-hidden="true" /></div><div><p className={styles.overline}>Recommended next move</p><h3>{activeProjects.length ? "Review your active work." : "Create a project to begin."}</h3><p>{activeProjects.length ? "Keep momentum by checking what needs your attention today." : "A project gives your team a shared place to plan, execute, and finish."}</p></div><Link href="/"><ArrowUpRight size={18} aria-hidden="true" /></Link></div><div className={styles.today}><CalendarDays size={17} aria-hidden="true" /><div><p className={styles.overline}>Today</p><strong>No deadlines yet</strong><small>Your calendar is clear.</small></div><CheckCircle2 size={18} aria-hidden="true" /></div></section>
-    </>}
-  </>;
+  function markActivityRead() {
+    setHasUnreadActivity(false);
+    window.localStorage.setItem(ACTIVITY_READ_KEY, "true");
+  }
+
+  // Active data source
+  const activeProjects = isDemoMode ? DEMO_PROJECTS : realProjects;
+  const activeClients = isDemoMode ? DEMO_CLIENTS : realClients;
+  const activeWorkspace = organizations.find((o) => o.id === selectedOrgId) ?? organizations[0];
+  const firstName = user?.firstName ?? user?.username ?? "Operations Lead";
+
+  // Filtered and searched projects
+  const filteredProjects = useMemo(() => {
+    return activeProjects.filter((p) => {
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (p.client?.name && p.client.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (p.client?.companyName && p.client.companyName.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      if (!matchesSearch) return false;
+
+      if (statusFilter === "ALL") return true;
+      if (statusFilter === "ACTIVE") return p.status === "ACTIVE";
+      if (statusFilter === "PLANNING") return p.status === "PLANNING";
+      if (statusFilter === "COMPLETED") return p.status === "COMPLETED";
+      return true;
+    });
+  }, [activeProjects, searchQuery, statusFilter]);
+
+  // Metrics
+  const activeCount = useMemo(
+    () => activeProjects.filter((p) => p.status === "ACTIVE" || p.status === "PLANNING").length,
+    [activeProjects]
+  );
+  const completedCount = useMemo(
+    () => activeProjects.filter((p) => p.status === "COMPLETED").length,
+    [activeProjects]
+  );
+  const totalClientsCount = activeClients.length;
+  const urgentCount = useMemo(
+    () => activeProjects.filter((p) => p.dueDate && p.status !== "COMPLETED").length,
+    [activeProjects]
+  );
+  const velocityScore = activeProjects.length > 0 ? Math.round((completedCount / activeProjects.length) * 100) : 100;
+
+  // Date formatted
+  const formattedToday = useMemo(() => {
+    return new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
+
+  // Form Submissions
+  async function handleCreateProject(e: FormEvent) {
+    e.preventDefault();
+    if (!newProjectName.trim()) return;
+
+    setModalError("");
+    setModalSubmitting(true);
+
+    try {
+      const token = await getToken();
+      const payload: Record<string, unknown> = {
+        name: newProjectName.trim(),
+        status: newProjectStatus,
+      };
+
+      if (newProjectDescription.trim()) payload.description = newProjectDescription.trim();
+      if (newProjectClientId) payload.clientId = newProjectClientId;
+      if (newProjectDueDate) payload.dueDate = new Date(newProjectDueDate).toISOString();
+
+      const targetOrgId = activeWorkspace?.id ?? "default";
+      const res = await fetch(`${API_URL}/organizations/${targetOrgId}/projects`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(body?.message ?? "Unable to create project.");
+      }
+
+      const createdProject: Project = {
+        ...body,
+        progress: 10,
+        tasksCount: 1,
+        tasksDone: 0,
+      };
+
+      setRealProjects((prev) => [createdProject, ...prev]);
+      setIsDemoMode(false); // Switch to real data
+      setIsProjectModalOpen(false);
+      setNewProjectName("");
+      setNewProjectDescription("");
+      setNewProjectClientId("");
+      setNewProjectDueDate("");
+    } catch (err: unknown) {
+      setModalError(err instanceof Error ? err.message : "Failed to create project.");
+    } finally {
+      setModalSubmitting(false);
+    }
+  }
+
+  async function handleCreateClient(e: FormEvent) {
+    e.preventDefault();
+    if (!newClientName.trim()) return;
+
+    setModalError("");
+    setModalSubmitting(true);
+
+    try {
+      const token = await getToken();
+      const payload: Record<string, unknown> = {
+        name: newClientName.trim(),
+        status: newClientStatus,
+      };
+
+      if (newClientCompany.trim()) payload.companyName = newClientCompany.trim();
+      if (newClientEmail.trim()) payload.email = newClientEmail.trim();
+
+      const targetOrgId = activeWorkspace?.id ?? "default";
+      const res = await fetch(`${API_URL}/organizations/${targetOrgId}/clients`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(body?.message ?? "Unable to add client.");
+      }
+
+      const createdClient: Client = {
+        ...body,
+        projectsCount: 0,
+      };
+
+      setRealClients((prev) => [createdClient, ...prev]);
+      setIsDemoMode(false);
+      setIsClientModalOpen(false);
+      setNewClientName("");
+      setNewClientCompany("");
+      setNewClientEmail("");
+    } catch (err: unknown) {
+      setModalError(err instanceof Error ? err.message : "Failed to add client.");
+    } finally {
+      setModalSubmitting(false);
+    }
+  }
+
+  if (!isLoaded || (isSignedIn && loading)) {
+    return (
+      <div className={styles.loadingPage}>
+        <div className={styles.loadingBar} />
+        <p>Calibrating Opsflow command center...</p>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className={styles.loadingState}>
+        <Link href="/auth">Sign in to access your operations dashboard</Link>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* ---------------- TOP BAR ---------------- */}
+      <header className={styles.topBar}>
+        <div className={styles.topBarLeft}>
+          <span className={styles.dateContext}>
+            <CalendarDays size={13} aria-hidden="true" />
+            {formattedToday}
+          </span>
+        </div>
+
+        <div className={styles.topBarRight}>
+          <button
+            type="button"
+            className={`${styles.demoToggleBtn} ${isDemoMode ? styles.demoActive : ""}`}
+            onClick={() => setIsDemoMode(!isDemoMode)}
+            title="Toggle between rich preview demo data and live workspace data"
+          >
+            <Sparkles size={12} aria-hidden="true" />
+            <span>{isDemoMode ? "Preview Mode (Active)" : "View Demo Data"}</span>
+          </button>
+
+          <Link href="/" className={styles.secondaryAction} title="Manage or switch workspaces">
+            <Building2 size={13} aria-hidden="true" />
+            <span>{activeWorkspace?.name ?? "Ops Workspace"}</span>
+          </Link>
+        </div>
+      </header>
+
+      {/* ---------------- COMMAND BANNER ---------------- */}
+      <section className={styles.commandBanner}>
+        <div className={styles.commandLeft}>
+          <h1>Good morning, {firstName}.</h1>
+          <div className={styles.commandSubtitle}>
+            <span>
+              {activeCount} active stream{activeCount === 1 ? "" : "s"} in motion across {totalClientsCount} partner account{totalClientsCount === 1 ? "" : "s"}.
+            </span>
+            <span className={styles.pulseBadge}>
+              <span className={styles.liveDot} />
+              98.4% On-Track Velocity
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.secondaryAction}
+            onClick={() => {
+              setModalError("");
+              setIsClientModalOpen(true);
+            }}
+          >
+            <UsersRound size={13} aria-hidden="true" />
+            <span>Add Client</span>
+          </button>
+          <button
+            type="button"
+            className={styles.primaryAction}
+            onClick={() => {
+              setModalError("");
+              setIsProjectModalOpen(true);
+            }}
+          >
+            <Plus size={14} aria-hidden="true" />
+            <span>New Project</span>
+          </button>
+        </div>
+      </section>
+
+      {error && (
+        <div className={styles.errorBanner} role="alert">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <AlertCircle size={16} aria-hidden="true" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            className={styles.closeBtn}
+            aria-label="Dismiss error"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* ---------------- 4-TILE KPI STRIP ---------------- */}
+      <section className={styles.kpiStrip} aria-label="Operational metrics">
+        {/* Metric 1 */}
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span>Active Initiatives</span>
+            <FolderKanban size={14} aria-hidden="true" />
+          </div>
+          <div className={styles.kpiNumberRow}>
+            <span className={styles.kpiNumber}>{activeCount}</span>
+            <span className={styles.kpiTrendPositive}>
+              <TrendingUp size={12} /> {completedCount} Done
+            </span>
+          </div>
+          <div className={styles.kpiProgressTrack}>
+            <div
+              className={styles.kpiProgressBar}
+              style={{
+                width: `${activeProjects.length > 0 ? (activeCount / activeProjects.length) * 100 : 0}%`,
+              }}
+            />
+          </div>
+          <div className={styles.kpiBottom}>
+            <span>{activeProjects.length} total projects logged</span>
+            <span>{velocityScore}% velocity</span>
+          </div>
+        </article>
+
+        {/* Metric 2 */}
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span>Client Partnerships</span>
+            <UsersRound size={14} aria-hidden="true" />
+          </div>
+          <div className={styles.kpiNumberRow}>
+            <span className={styles.kpiNumber}>{totalClientsCount}</span>
+            <span className={styles.kpiTrendPositive}>
+              <CheckCircle2 size={12} /> 100% Retained
+            </span>
+          </div>
+          <div className={styles.kpiProgressTrack}>
+            <div className={styles.kpiProgressBar} style={{ width: "85%" }} />
+          </div>
+          <div className={styles.kpiBottom}>
+            <span>Active &amp; Lead stakeholder orbit</span>
+            <span>Direct Comms</span>
+          </div>
+        </article>
+
+        {/* Metric 3 */}
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span>Scheduled Deadlines</span>
+            <Clock size={14} aria-hidden="true" />
+          </div>
+          <div className={styles.kpiNumberRow}>
+            <span className={styles.kpiNumber}>{urgentCount}</span>
+            <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--rust)" }}>
+              {urgentCount > 0 ? "Targeted" : "Clear"}
+            </span>
+          </div>
+          <div className={styles.kpiProgressTrack}>
+            <div
+              className={styles.kpiProgressBar}
+              style={{ width: `${urgentCount > 0 ? 60 : 0}%`, background: "var(--rust)" }}
+            />
+          </div>
+          <div className={styles.kpiBottom}>
+            <span>{urgentCount > 0 ? "Upcoming milestone deliverables" : "No pending bottlenecks"}</span>
+            <span>Sprint 36</span>
+          </div>
+        </article>
+
+      </section>
+
+      {/* ---------------- MAIN DUAL-COLUMN GRID ---------------- */}
+      <div className={styles.contentGrid}>
+        {/* LEFT COLUMN: OPERATIONAL WORK STATION */}
+        <section className={styles.workStationCard}>
+          <div className={styles.workStationHeader}>
+            <div className={styles.stationTitleBlock}>
+              <p className={styles.overline}>WORK PIPELINE</p>
+              <h2>Projects &amp; Deliverables</h2>
+            </div>
+
+            <div className={styles.stationControls}>
+              {/* Search Bar */}
+              <div className={styles.searchPill}>
+                <Search size={12} aria-hidden="true" />
+                <input
+                  placeholder="Filter pipeline..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Filter pipeline"
+                />
+              </div>
+
+              {/* Status Filter Tabs */}
+              <div className={styles.statusFilterTabs} role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === "ALL"}
+                  className={`${styles.filterTabBtn} ${statusFilter === "ALL" ? styles.filterTabActive : ""}`}
+                  onClick={() => setStatusFilter("ALL")}
+                >
+                  All ({activeProjects.length})
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === "ACTIVE"}
+                  className={`${styles.filterTabBtn} ${statusFilter === "ACTIVE" ? styles.filterTabActive : ""}`}
+                  onClick={() => setStatusFilter("ACTIVE")}
+                >
+                  Active
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === "PLANNING"}
+                  className={`${styles.filterTabBtn} ${statusFilter === "PLANNING" ? styles.filterTabActive : ""}`}
+                  onClick={() => setStatusFilter("PLANNING")}
+                >
+                  Planning
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === "COMPLETED"}
+                  className={`${styles.filterTabBtn} ${statusFilter === "COMPLETED" ? styles.filterTabActive : ""}`}
+                  onClick={() => setStatusFilter("COMPLETED")}
+                >
+                  Done
+                </button>
+              </div>
+
+              {/* View Switcher: List vs Cards vs Timeline */}
+              <div className={styles.viewModeGroup} aria-label="Select layout view">
+                <button
+                  type="button"
+                  title="List View"
+                  className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnActive : ""}`}
+                  onClick={() => setViewMode("list")}
+                >
+                  <List size={13} />
+                </button>
+                <button
+                  type="button"
+                  title="Grid Cards View"
+                  className={`${styles.viewBtn} ${viewMode === "cards" ? styles.viewBtnActive : ""}`}
+                  onClick={() => setViewMode("cards")}
+                >
+                  <LayoutGrid size={13} />
+                </button>
+                <button
+                  type="button"
+                  title="Timeline Group View"
+                  className={`${styles.viewBtn} ${viewMode === "timeline" ? styles.viewBtnActive : ""}`}
+                  onClick={() => setViewMode("timeline")}
+                >
+                  <Layers size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* PROJECT VIEWS */}
+          {filteredProjects.length > 0 ? (
+            <>
+              {/* VIEW 1: LIST VIEW */}
+              {viewMode === "list" && (
+                <div className={styles.projectList}>
+                  {filteredProjects.map((project) => {
+                    const badgeClass =
+                      project.status === "ACTIVE"
+                        ? styles.badgeActive
+                        : project.status === "PLANNING"
+                        ? styles.badgePlanning
+                        : project.status === "COMPLETED"
+                        ? styles.badgeCompleted
+                        : styles.badgeOnHold;
+
+                    const progressVal = project.progress ?? (project.status === "COMPLETED" ? 100 : 45);
+
+                    return (
+                      <article className={styles.projectRow} key={project.id}>
+                        <div className={styles.rowMain}>
+                          <div className={styles.rowIcon}>
+                            <FolderKanban size={15} aria-hidden="true" />
+                          </div>
+                          <div className={styles.rowMeta}>
+                            <strong className={styles.rowTitle}>{project.name}</strong>
+                            <div className={styles.rowSubMeta}>
+                              <span className={styles.clientChip}>
+                                <Building2 size={11} />
+                                {project.client ? project.client.name : "Internal Work"}
+                              </span>
+                              {project.dueDate && (
+                                <>
+                                  <span>•</span>
+                                  <span className={styles.dueDateChip}>
+                                    <Calendar size={11} />
+                                    Due {new Date(project.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                  </span>
+                                </>
+                              )}
+                              {project.priority === "URGENT" && (
+                                <span className={styles.priorityUrgent}>
+                                  <Flame size={10} /> Urgent
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={styles.rowRight}>
+                          <div className={styles.progressPill}>
+                            <div className={styles.miniTrack}>
+                              <div className={styles.miniFill} style={{ width: `${progressVal}%` }} />
+                            </div>
+                            <span>{progressVal}%</span>
+                          </div>
+
+                          <span className={`${styles.statusBadge} ${badgeClass}`}>
+                            {project.status.replace("_", " ")}
+                          </span>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* VIEW 2: CARDS GRID VIEW */}
+              {viewMode === "cards" && (
+                <div className={styles.projectCardGrid}>
+                  {filteredProjects.map((project) => {
+                    const badgeClass =
+                      project.status === "ACTIVE"
+                        ? styles.badgeActive
+                        : project.status === "PLANNING"
+                        ? styles.badgePlanning
+                        : project.status === "COMPLETED"
+                        ? styles.badgeCompleted
+                        : styles.badgeOnHold;
+
+                    const progressVal = project.progress ?? (project.status === "COMPLETED" ? 100 : 45);
+
+                    return (
+                      <article className={styles.gridCard} key={project.id}>
+                        <div>
+                          <div className={styles.gridCardTop}>
+                            <span className={styles.clientChip}>
+                              <Building2 size={11} />
+                              {project.client ? project.client.companyName ?? project.client.name : "Internal"}
+                            </span>
+                            <span className={`${styles.statusBadge} ${badgeClass}`}>
+                              {project.status}
+                            </span>
+                          </div>
+                          <h4 className={styles.gridCardTitle}>{project.name}</h4>
+                          <p className={styles.gridCardDesc}>
+                            {project.description || "No project scope details provided yet."}
+                          </p>
+                        </div>
+
+                        <div>
+                          <div className={styles.kpiProgressTrack} style={{ margin: "10px 0 6px" }}>
+                            <div className={styles.kpiProgressBar} style={{ width: `${progressVal}%` }} />
+                          </div>
+                          <div className={styles.gridCardBottom}>
+                            <span style={{ color: "var(--ink-muted)" }}>
+                              {project.tasksDone ?? 3}/{project.tasksCount ?? 5} tasks completed
+                            </span>
+                            {project.dueDate && (
+                              <span className={styles.dueDateChip}>
+                                <Clock size={11} />
+                                {new Date(project.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* VIEW 3: TIMELINE VIEW */}
+              {viewMode === "timeline" && (
+                <div>
+                  <div className={styles.timelineGroup}>
+                    <span className={styles.timelineGroupTitle}>Current Sprint • Deliverables</span>
+                    <div className={styles.projectList}>
+                      {filteredProjects.map((project) => (
+                        <div className={styles.projectRow} key={project.id}>
+                          <div className={styles.rowMain}>
+                            <Clock size={14} color="var(--rust)" />
+                            <div className={styles.rowMeta}>
+                              <strong className={styles.rowTitle}>{project.name}</strong>
+                              <span style={{ fontSize: "11px", color: "var(--ink-muted)" }}>
+                                {project.client ? project.client.name : "Internal"} • Milestone Release
+                              </span>
+                            </div>
+                          </div>
+                          <span className={styles.dueDateChip}>
+                            <Calendar size={12} />
+                            {project.dueDate
+                              ? new Date(project.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                              : "No fixed deadline"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className={styles.emptyStation}>
+              <div className={styles.emptyIconBox}>
+                <BriefcaseBusiness size={22} aria-hidden="true" />
+              </div>
+              <h4>{searchQuery ? "No matching deliverables found" : "Ready for your next initiative"}</h4>
+              <p>
+                {searchQuery
+                  ? "Try resetting your search query or switching the status filter tab."
+                  : "Organize tasks, attach clients, and track milestones in a unified command stream."}
+              </p>
+              <button
+                type="button"
+                className={styles.primaryAction}
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("ALL");
+                  setIsProjectModalOpen(true);
+                }}
+              >
+                <Plus size={14} aria-hidden="true" />
+                <span>Create New Project</span>
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* RIGHT COLUMN: FOCUS & INTELLIGENCE */}
+        <aside className={styles.focusStack}>
+          {/* 1. ATTENTION RADAR (TRIAGE) */}
+          <div className={styles.sideWidget}>
+            <div className={styles.widgetHeader}>
+              <div>
+                <p className={styles.overline}>TRIAGE &amp; ATTENTION</p>
+                <h3>Action Radar</h3>
+              </div>
+              <Sparkles size={15} color="var(--rust)" aria-hidden="true" />
+            </div>
+
+            <div className={styles.triageList}>
+              {DEMO_TRIAGE.map((item) => (
+                <div className={styles.triageItem} key={item.id}>
+                  <div
+                    className={
+                      item.urgency === "urgent" ? styles.triageIconRust : styles.triageIconGreen
+                    }
+                  >
+                    {item.urgency === "urgent" ? <Flame size={13} /> : <CheckCircle2 size={13} />}
+                  </div>
+                  <div className={styles.triageContent}>
+                    <strong>{item.title}</strong>
+                    <p>{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. CLIENT ROSTER */}
+          <div className={styles.sideWidget}>
+            <div className={styles.widgetHeader}>
+              <div>
+                <p className={styles.overline}>RELATIONSHIPS</p>
+                <h3>Client Roster</h3>
+              </div>
+              <button
+                type="button"
+                className={styles.widgetActionLink}
+                onClick={() => {
+                  setModalError("");
+                  setIsClientModalOpen(true);
+                }}
+              >
+                <Plus size={12} aria-hidden="true" />
+                <span>Add</span>
+              </button>
+            </div>
+
+            <div className={styles.clientRosterList}>
+              {activeClients.map((client) => (
+                <div className={styles.clientCardRow} key={client.id}>
+                  <div className={styles.clientLeft}>
+                    <span className={styles.clientAvatar}>
+                      {client.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <div className={styles.clientMeta}>
+                      <strong>{client.name}</strong>
+                      <small>{client.companyName ?? "Independent partner"}</small>
+                    </div>
+                  </div>
+                  <span
+                    className={`${styles.statusBadge} ${
+                      client.status === "ACTIVE"
+                        ? styles.badgeActive
+                        : client.status === "LEAD"
+                        ? styles.badgePlanning
+                        : styles.badgeCompleted
+                    }`}
+                  >
+                    {client.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </aside>
+      </div>
+
+      {/* ---------------- RECENT ACTIVITY TOAST ---------------- */}
+      <button
+        type="button"
+        className={`${styles.activityToast} ${isActivityExpanded ? styles.activityToastExpanded : ""}`}
+        aria-expanded={isActivityExpanded}
+        aria-label={isActivityExpanded ? "Collapse recent activity" : "Show recent activity"}
+        onClick={() => {
+          markActivityRead();
+          setIsActivityExpanded((expanded) => !expanded);
+        }}
+      >
+        <span className={styles.activityToastSummary}>
+          <span className={styles.activityDot} />
+          <span>Recent activity</span>
+          {hasUnreadActivity && <small>{DEMO_ACTIVITY.length} new</small>}
+        </span>
+
+        {isActivityExpanded && (
+          <span className={styles.activityToastList}>
+            {DEMO_ACTIVITY.map((act) => (
+              <span className={styles.activityRow} key={act.id}>
+                <span className={styles.activityDetails}>
+                  <span>{act.title}</span>
+                  <small>{act.time}</small>
+                </span>
+              </span>
+            ))}
+          </span>
+        )}
+      </button>
+
+      {/* ---------------- MODAL: CREATE PROJECT ---------------- */}
+      {isProjectModalOpen && (
+        <div
+          className={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-project-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsProjectModalOpen(false);
+          }}
+        >
+          <div className={styles.modalSheet}>
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.overline}>NEW INITIATIVE</p>
+                <h3 id="modal-project-title">Launch Project</h3>
+              </div>
+              <button
+                type="button"
+                className={styles.closeBtn}
+                onClick={() => setIsProjectModalOpen(false)}
+                aria-label="Close modal"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProject} className={styles.modalForm}>
+              {modalError && <div className={styles.modalErrorMsg}>{modalError}</div>}
+
+              <div className={styles.formRow}>
+                <label htmlFor="p-name">Project Title *</label>
+                <input
+                  id="p-name"
+                  required
+                  minLength={2}
+                  maxLength={120}
+                  placeholder="e.g. Infrastructure Modernization Sprint"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className={styles.formRow}>
+                <label htmlFor="p-desc">Scope &amp; Deliverables</label>
+                <textarea
+                  id="p-desc"
+                  placeholder="Key milestones, deliverables, and technical boundaries..."
+                  value={newProjectDescription}
+                  onChange={(e) => setNewProjectDescription(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className={styles.formRow}>
+                  <label htmlFor="p-client">Partner Client</label>
+                  <select
+                    id="p-client"
+                    value={newProjectClientId}
+                    onChange={(e) => setNewProjectClientId(e.target.value)}
+                  >
+                    <option value="">Internal Workspace</option>
+                    {activeClients.map((c) => (
+                      <option value={c.id} key={c.id}>
+                        {c.name} {c.companyName ? `(${c.companyName})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formRow}>
+                  <label htmlFor="p-status">Initial State</label>
+                  <select
+                    id="p-status"
+                    value={newProjectStatus}
+                    onChange={(e) => setNewProjectStatus(e.target.value)}
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="PLANNING">Planning</option>
+                    <option value="ON_HOLD">On Hold</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.formRow}>
+                <label htmlFor="p-due">Target Due Date</label>
+                <input
+                  id="p-due"
+                  type="date"
+                  value={newProjectDueDate}
+                  onChange={(e) => setNewProjectDueDate(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.modalFooter}>
+                <button
+                  type="button"
+                  className={styles.secondaryAction}
+                  onClick={() => setIsProjectModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalSubmitting || !newProjectName.trim()}
+                  className={styles.primaryAction}
+                >
+                  {modalSubmitting ? "Launching..." : "Launch Project"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- MODAL: CREATE CLIENT ---------------- */}
+      {isClientModalOpen && (
+        <div
+          className={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-client-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsClientModalOpen(false);
+          }}
+        >
+          <div className={styles.modalSheet}>
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.overline}>RELATIONSHIPS</p>
+                <h3 id="modal-client-title">Add Partner Contact</h3>
+              </div>
+              <button
+                type="button"
+                className={styles.closeBtn}
+                onClick={() => setIsClientModalOpen(false)}
+                aria-label="Close modal"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateClient} className={styles.modalForm}>
+              {modalError && <div className={styles.modalErrorMsg}>{modalError}</div>}
+
+              <div className={styles.formRow}>
+                <label htmlFor="c-name">Contact Full Name *</label>
+                <input
+                  id="c-name"
+                  required
+                  minLength={2}
+                  maxLength={120}
+                  placeholder="e.g. Rachel Foster"
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className={styles.formRow}>
+                <label htmlFor="c-company">Company / Entity</label>
+                <input
+                  id="c-company"
+                  placeholder="e.g. Starlight Media Group"
+                  value={newClientCompany}
+                  onChange={(e) => setNewClientCompany(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "12px" }}>
+                <div className={styles.formRow}>
+                  <label htmlFor="c-email">Work Email</label>
+                  <input
+                    id="c-email"
+                    type="email"
+                    placeholder="rachel@starlight.io"
+                    value={newClientEmail}
+                    onChange={(e) => setNewClientEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.formRow}>
+                  <label htmlFor="c-status">Stage</label>
+                  <select
+                    id="c-status"
+                    value={newClientStatus}
+                    onChange={(e) => setNewClientStatus(e.target.value)}
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="LEAD">Lead</option>
+                    <option value="PAST">Past</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.modalFooter}>
+                <button
+                  type="button"
+                  className={styles.secondaryAction}
+                  onClick={() => setIsClientModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalSubmitting || !newClientName.trim()}
+                  className={styles.primaryAction}
+                >
+                  {modalSubmitting ? "Saving..." : "Save Partner"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }

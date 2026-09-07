@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ClerkGuard } from '../auth/clerk.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectsService } from './projects.service';
 
 @Controller('organizations/:organizationId/projects')
@@ -24,5 +25,24 @@ export class ProjectsController {
     @Body() body: CreateProjectDto,
   ) {
     return this.projectsService.createForUser(organizationId, user.id, body);
+  }
+
+  @Patch(':projectId')
+  update(
+    @Param('organizationId') organizationId: string,
+    @Param('projectId') projectId: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: UpdateProjectDto,
+  ) {
+    return this.projectsService.updateForUser(organizationId, projectId, user.id, body);
+  }
+
+  @Delete(':projectId')
+  remove(
+    @Param('organizationId') organizationId: string,
+    @Param('projectId') projectId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.projectsService.deleteForUser(organizationId, projectId, user.id);
   }
 }
