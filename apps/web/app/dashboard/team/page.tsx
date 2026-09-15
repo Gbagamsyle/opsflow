@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth, useUser } from "@clerk/nextjs";
-import { AlertCircle, Check, MailPlus, ShieldCheck, Trash2, UserRound, UsersRound, X } from "lucide-react";
+import { AlertCircle, Check, MailPlus, Search, ShieldCheck, Trash2, UserRound, UsersRound, X } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useCurrentOrganization } from "../../../src/hooks/use-current-organization";
@@ -49,6 +49,8 @@ export default function TeamPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [isInviting, setIsInviting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"ALL" | Role>("ALL");
 
   const canManage = currentRole === "OWNER" || currentRole === "ADMIN";
 
@@ -147,13 +149,19 @@ export default function TeamPage() {
   const ownerCount = members.filter((member) => member.role === "OWNER").length;
   const adminCount = members.filter((member) => member.role === "ADMIN").length;
   const memberCount = members.filter((member) => member.role === "MEMBER").length;
+  const inviteEmailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail.trim());
+  const filteredMembers = members.filter((member) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesQuery = !query || memberName(member).toLowerCase().includes(query) || member.user.email.toLowerCase().includes(query);
+    return matchesQuery && (roleFilter === "ALL" || member.role === roleFilter);
+  });
 
   return (
     <section className={styles.teamPage}>
-      <header className={styles.teamHeader}>
-        <div className={styles.teamHeaderCopy}>
-          <h1>Team <span>directory</span></h1>
-          <p className={styles.teamSubtitle}>The people and permissions behind {organization?.name ?? "your workspace"}.</p>
+      <header className={styles.pageHeader}>
+        <div>
+          <p className={styles.tableEyebrow}>WORKSPACE PEOPLE</p>
+          <h1>Team</h1>
         </div>
         {canManage && <button type="button" className={styles.inviteButton} onClick={() => { setInviteError(""); setIsInviteOpen(true); }}><MailPlus size={15} aria-hidden="true" /> Invite member</button>}
       </header>
@@ -165,14 +173,15 @@ export default function TeamPage() {
         </div>
       )}
 
-      <div className={styles.roleStats} aria-label="Team role summary">
-        <div className={`${styles.roleStat} ${styles.roleStatOwner}`}><span className={styles.statIcon}><ShieldCheck size={15} /></span><span><strong>{ownerCount}</strong><small>Owner</small></span></div>
-        <div className={`${styles.roleStat} ${styles.roleStatAdmin}`}><span className={styles.statIcon}><UsersRound size={15} /></span><span><strong>{adminCount}</strong><small>Admins</small></span></div>
-        <div className={`${styles.roleStat} ${styles.roleStatMember}`}><span className={styles.statIcon}><UserRound size={15} /></span><span><strong>{memberCount}</strong><small>Members</small></span></div>
-      </div>
-
       <div className={styles.memberTableShell}>
-        <div className={styles.tableIntro}><div><p className={styles.tableEyebrow}>PEOPLE</p><h2>Workspace members</h2></div><span className={styles.liveStatus}><span /> Live directory</span></div>
+        <div className={styles.tableIntro}>
+          <div><h2>Workspace members</h2><span className={styles.liveStatus}><span /> Live directory</span></div>
+          <div className={styles.memberSummary}><span><strong>{ownerCount}</strong> owner</span><span><strong>{adminCount}</strong> admin{adminCount === 1 ? "" : "s"}</span><span><strong>{memberCount}</strong> member{memberCount === 1 ? "" : "s"}</span></div>
+        </div>
+        <div className={styles.memberControls}>
+          <label className={styles.searchField}><Search size={14} aria-hidden="true" /><span className={styles.srOnly}>Search team</span><input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search by name or email" /></label>
+          <label className={styles.filterField}><span className={styles.srOnly}>Filter by role</span><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">All roles</option><option value="OWNER">Owners</option><option value="ADMIN">Admins</option><option value="MEMBER">Members</option></select></label>
+        </div>
         <div className={styles.memberTable} role="table" aria-label="Workspace team members">
           <div className={styles.memberTableHeader} role="row">
             <span role="columnheader">Member</span>
@@ -180,8 +189,9 @@ export default function TeamPage() {
             <span role="columnheader">Joined</span>
             <span role="columnheader">Actions</span>
           </div>
-          {members.length === 0 && <div className={styles.emptyMembers}><UsersRound size={22} /><strong>No members yet</strong><span>Workspace members will appear here.</span></div>}
-          {members.map((member) => {
+          {members.length === 0 && <div className={styles.emptyMembers}><UsersRound size={22} /><strong>No members yet</strong><span>Invite someone to start building this workspace.</span>{canManage && <button type="button" className={styles.inviteButton} onClick={() => { setInviteError(""); setIsInviteOpen(true); }}><MailPlus size={14} aria-hidden="true" /> Invite member</button>}</div>}
+          {members.length > 0 && filteredMembers.length === 0 && <div className={styles.emptyMembers}><Search size={22} /><strong>No matching members</strong><span>Try a different name, email, or role.</span></div>}
+          {filteredMembers.map((member) => {
           const isOwner = member.role === "OWNER";
           const isSelf = member.user.clerkUserId === currentUser?.id;
           const isSaving = savingUserId === member.userId;
@@ -223,8 +233,9 @@ export default function TeamPage() {
             <p>Invite an existing Opsflow user by email. They will join as a member immediately.</p>
             {inviteError && <div className={styles.errorBanner} role="alert"><span><AlertCircle size={15} aria-hidden="true" /> {inviteError}</span></div>}
             <label htmlFor="invite-email">Email address</label>
-            <input id="invite-email" type="email" required value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="teammate@example.com" autoFocus />
-            <div className={styles.modalFooter}><button type="button" className={styles.secondaryButton} onClick={() => setIsInviteOpen(false)}>Cancel</button><button type="submit" className={styles.inviteButton} disabled={isInviting}>{isInviting ? "Adding..." : "Add member"}</button></div>
+            <input id="invite-email" type="email" required value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="teammate@example.com" autoFocus aria-invalid={Boolean(inviteEmail) && !inviteEmailIsValid} />
+            {inviteEmail.length > 0 && !inviteEmailIsValid && <span className={styles.inviteHint}>Enter a valid email address, such as teammate@example.com.</span>}
+            <div className={styles.modalFooter}><button type="button" className={styles.secondaryButton} onClick={() => setIsInviteOpen(false)}>Cancel</button><button type="submit" className={styles.inviteButton} disabled={isInviting || !inviteEmailIsValid} title={!inviteEmailIsValid ? "Enter a valid email address first" : "Add member"}>{isInviting ? "Adding..." : "Add member"}</button></div>
           </form>
         </div>
       </div>}

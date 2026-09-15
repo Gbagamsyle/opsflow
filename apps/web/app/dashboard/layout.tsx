@@ -5,6 +5,7 @@ import {
   BriefcaseBusiness,
   CircleHelp,
   FolderKanban,
+  Handshake,
   LayoutDashboard,
   Link2,
   ListTodo,
@@ -24,6 +25,8 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
     ? "dashboard"
     : pathname.startsWith("/dashboard/projects")
       ? "projects"
+      : pathname.startsWith("/dashboard/clients")
+        ? "clients"
       : pathname.startsWith("/dashboard/tasks")
         ? "tasks"
         : pathname.startsWith("/dashboard/team")
@@ -63,6 +66,13 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
           >
             <FolderKanban className={styles.navIcon} aria-hidden="true" />
             <span>Projects</span>
+          </Link>
+          <Link
+            className={`${styles.navItem} ${activeTab === "clients" ? styles.navItemActive : ""}`}
+            href="/dashboard/clients"
+          >
+            <Handshake className={styles.navIcon} aria-hidden="true" />
+            <span>Clients</span>
           </Link>
           <Link
             className={`${styles.navItem} ${activeTab === "tasks" ? styles.navItemActive : ""}`}

@@ -330,6 +330,29 @@
   gap: 22px;
 }
 
+.clientDirectoryToolbar { display: flex; align-items: center; gap: 12px; }
+.clientDirectoryToolbar .searchPill { flex: 1; max-width: 620px; }
+.directoryCount { color: var(--ink-muted); font-size: 12px; }
+.clientDirectoryList { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(255, 255, 255, 0.56); }
+.clientDirectoryRow { display: grid; grid-template-columns: minmax(220px, 1.5fr) minmax(90px, 0.5fr) minmax(180px, 1fr) auto; align-items: center; gap: 18px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.clientDirectoryRow:last-child { border-bottom: 0; }
+.clientDirectoryRow:hover { background: #fbfaf6; }
+.clientDirectoryIdentity { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
+.clientDirectoryIdentity > span:last-child { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.clientDirectoryIdentity strong { overflow: hidden; color: var(--foreground); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.clientDirectoryIdentity small, .clientDirectoryMeta { overflow: hidden; color: var(--ink-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.clientDirectoryMeta { display: inline-flex; align-items: center; gap: 5px; }
+.clientDirectoryMeta > span { color: var(--line); }
+.clientDirectoryActions { display: flex; align-items: center; gap: 3px; }
+
+@media (max-width: 760px) {
+  .clientDirectoryToolbar { align-items: stretch; flex-direction: column; }
+  .clientDirectoryToolbar .searchPill { max-width: none; }
+  .clientDirectoryRow { grid-template-columns: 1fr auto; gap: 10px; }
+  .clientDirectoryMeta { grid-column: 1; }
+  .clientDirectoryActions { grid-column: 2; grid-row: 2; }
+}
+
 .projectsPageHeader {
   display: flex;
   align-items: flex-end;
@@ -338,6 +361,9 @@
   padding-bottom: 20px;
   border-bottom: 1px solid var(--line);
 }
+
+.clientHeaderActions { display: flex; align-items: center; gap: 10px; }
+.clientHeaderActions .searchPill { width: min(260px, 32vw); }
 
 .projectSummary {
   display: grid;
@@ -398,6 +424,69 @@
 
 .backLink:hover {
   color: var(--green);
+}
+
+.clientWorkspace { width: 100%; max-width: none; margin: 0; padding: 14px 0 64px; }
+.clientWorkspaceHeader { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 0 26px; border-bottom: 1px solid var(--line); }
+.clientWorkspaceIdentity { display: flex; align-items: center; gap: 15px; }
+.clientHeaderTools { display: flex; align-items: center; gap: 9px; }
+.clientWorkspaceAvatar { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid #b9cdbb; border-radius: 12px; color: var(--green); background: #e5eee5; font-size: 21px; font-weight: 700; }
+.clientWorkspaceHeader h1 { margin: 4px 0 3px; color: var(--foreground); font-size: 32px; font-weight: 600; letter-spacing: -0.04em; }
+.clientWorkspaceHeader p:last-child { margin: 0; color: var(--ink-muted); font-size: 13px; }
+.clientMetricStrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin-top: 18px; border: 1px solid var(--line); background: var(--line); }
+.clientMetricStrip > div { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fffefa; }
+.clientMetricStrip > div > svg { color: var(--green); }
+.clientMetricStrip span { display: flex; flex-direction: column; gap: 2px; }
+.clientMetricStrip strong { color: var(--foreground); font-size: 19px; font-weight: 600; }
+.clientMetricStrip small { color: var(--ink-muted); font-size: 10px; }
+.clientContactGrid, .clientLowerGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.clientInfoPanel, .clientWorkspaceSection { border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, 0.56); }
+.clientInfoPanel { min-height: 142px; padding: 20px; }
+.clientPanelHeading { display: flex; align-items: center; gap: 10px; }
+.clientPanelIcon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; color: var(--green); background: #e5eee5; }
+.clientInfoPanel h2, .clientSectionHeader h2 { margin: 5px 0 0; color: var(--foreground); font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+.clientContactRows { display: flex; flex-wrap: wrap; gap: 9px 18px; margin-top: 22px; }
+.clientContactRows span { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-muted); font-size: 12px; }
+.clientContactRows svg { color: var(--green); }
+.clientNotes { max-width: 620px; margin: 20px 0 0; color: var(--ink-muted); font-size: 13px; line-height: 1.55; }
+.clientWorkspaceSection { margin-top: 18px; overflow: hidden; }
+.clientSectionHeader { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.clientSectionHeader > span, .clientSectionHeader > svg { color: var(--ink-muted); font-size: 12px; }
+.sectionAction { display: inline-flex; align-items: center; gap: 5px; color: var(--green); font-size: 11px; font-weight: 700; text-decoration: none; }
+.sectionAction:hover { color: var(--foreground); }
+.clientProjectGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; padding: 14px; }
+.clientProjectCard { display: grid; gap: 13px; padding: 15px; border: 1px solid var(--line); border-radius: 7px; color: inherit; background: #fbfaf6; text-decoration: none; transition: border-color 150ms ease, transform 150ms ease; }
+.clientProjectCard:hover { border-color: #91aa94; transform: translateY(-1px); }
+.clientProjectCard > div { display: flex; flex-direction: column; gap: 4px; }
+.clientProjectCard strong { color: var(--foreground); font-size: 13px; }
+.clientProjectCard span, .clientProjectCard small { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-muted); font-size: 11px; }
+.clientProjectCard .statusBadge { justify-self: start; color: var(--green); }
+.clientTaskStatusGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 14px; }
+.clientTaskStatus { padding: 13px; border: 1px solid var(--line); border-radius: 7px; background: #fbfaf6; }
+.clientTaskStatus > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--ink-muted); font-size: 11px; }
+.clientTaskStatus strong { color: var(--foreground); font-size: 20px; }
+.clientTaskStatusBar { height: 4px; margin-top: 13px; overflow: hidden; border-radius: 4px; background: #e6ebe5; }
+.clientTaskStatusBar span { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+.clientInvoiceList, .clientActivityList { padding: 5px 20px; }
+.clientInvoiceRow, .clientActivityRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.clientInvoiceRow:last-child, .clientActivityRow:last-child { border-bottom: 0; }
+.clientInvoiceRow span, .clientActivityRow span { display: flex; flex-direction: column; gap: 3px; }
+.clientInvoiceRow span:last-child { align-items: flex-end; }
+.clientInvoiceRow strong, .clientActivityRow strong { color: var(--foreground); font-size: 12px; }
+.clientInvoiceRow small, .clientActivityRow small { color: var(--ink-muted); font-size: 11px; }
+.clientActivityRow { justify-content: flex-start; }
+.clientActivityRow > svg { flex-shrink: 0; color: var(--green); }
+.clientEmptyState { padding: 24px 10px; color: var(--ink-muted); font-size: 12px; text-align: center; }
+
+@media (max-width: 760px) {
+  .clientHeaderActions { align-items: stretch; flex-direction: column; width: 100%; }
+  .clientHeaderActions .searchPill { width: auto; }
+  .clientWorkspace { padding: 24px 16px 42px; }
+  .clientWorkspaceHeader { align-items: flex-start; flex-direction: column; }
+  .clientHeaderTools { width: 100%; justify-content: space-between; }
+  .clientMetricStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .clientContactGrid, .clientLowerGrid, .clientProjectGrid { grid-template-columns: 1fr; }
+  .clientTaskStatusGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .projectWorkspaceHeader {
@@ -693,6 +782,17 @@
   font-size: 12px;
   color: var(--foreground);
   width: 110px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .statusFilterTabs {

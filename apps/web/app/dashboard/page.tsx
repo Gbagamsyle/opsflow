@@ -56,6 +56,7 @@ type Client = {
   companyName?: string | null;
   email?: string | null;
   phone?: string | null;
+  notes?: string | null;
   status: "LEAD" | "ACTIVE" | "PAST";
   projectsCount?: number;
 };
@@ -239,6 +240,8 @@ export default function Dashboard() {
   const [newClientName, setNewClientName] = useState("");
   const [newClientCompany, setNewClientCompany] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientPhone, setNewClientPhone] = useState("");
+  const [newClientNotes, setNewClientNotes] = useState("");
   const [newClientStatus, setNewClientStatus] = useState<string>("ACTIVE");
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
@@ -316,9 +319,11 @@ export default function Dashboard() {
         if (nextOrgId) {
           setSelectedOrgId(nextOrgId);
           window.localStorage.setItem("opsflow-selected-org", nextOrgId);
-          const params = new URLSearchParams(searchParams.toString());
-          params.set("org", nextOrgId);
-          router.replace(`${window.location.pathname}?${params.toString()}`);
+          if (searchParams.get("org") !== nextOrgId) {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("org", nextOrgId);
+            router.replace(`${window.location.pathname}?${params.toString()}`);
+          }
 
           const [projRes, clientRes, activityRes] = await Promise.all([
             fetch(`${API_URL}/organizations/${nextOrgId}/projects`, { headers }),
@@ -514,6 +519,8 @@ export default function Dashboard() {
 
       if (newClientCompany.trim() || editingClient) payload.companyName = newClientCompany.trim() || null;
       if (newClientEmail.trim() || editingClient) payload.email = newClientEmail.trim() || null;
+      if (newClientPhone.trim() || editingClient) payload.phone = newClientPhone.trim() || null;
+      if (newClientNotes.trim() || editingClient) payload.notes = newClientNotes.trim() || null;
 
       const targetOrgId = activeWorkspace?.id ?? "default";
       const res = await fetch(`${API_URL}/organizations/${targetOrgId}/clients${editingClient ? `/${editingClient.id}` : ""}`, {
@@ -544,6 +551,8 @@ export default function Dashboard() {
       setNewClientName("");
       setNewClientCompany("");
       setNewClientEmail("");
+      setNewClientPhone("");
+      setNewClientNotes("");
     } catch (err: unknown) {
       setModalError(err instanceof Error ? err.message : editingClient ? "Failed to update client." : "Failed to add client.");
     } finally {
@@ -1099,6 +1108,8 @@ export default function Dashboard() {
                   setNewClientName("");
                   setNewClientCompany("");
                   setNewClientEmail("");
+                  setNewClientPhone("");
+                  setNewClientNotes("");
                   setNewClientStatus("ACTIVE");
                   setIsClientModalOpen(true);
                 }}
@@ -1111,15 +1122,13 @@ export default function Dashboard() {
             <div className={styles.clientRosterList}>
               {activeClients.map((client) => (
                 <div className={styles.clientCardRow} key={client.id}>
-                  <div className={styles.clientLeft}>
-                    <span className={styles.clientAvatar}>
-                      {client.name.slice(0, 1).toUpperCase()}
-                    </span>
+                  <Link href={`/dashboard/clients/${client.id}`} className={styles.clientLeft}>
+                    <span className={styles.clientAvatar}>{client.name.slice(0, 1).toUpperCase()}</span>
                     <div className={styles.clientMeta}>
                       <strong>{client.name}</strong>
                       <small>{client.companyName ?? "Independent partner"}</small>
                     </div>
-                  </div>
+                  </Link>
                   <span
                     className={`${styles.statusBadge} ${
                       client.status === "ACTIVE"
@@ -1137,6 +1146,8 @@ export default function Dashboard() {
                       setNewClientName(client.name);
                       setNewClientCompany(client.companyName ?? "");
                       setNewClientEmail(client.email ?? "");
+                      setNewClientPhone(client.phone ?? "");
+                      setNewClientNotes(client.notes ?? "");
                       setNewClientStatus(client.status);
                       setModalError("");
                       setIsClientModalOpen(true);
@@ -1375,6 +1386,17 @@ export default function Dashboard() {
                     <option value="LEAD">Lead</option>
                     <option value="PAST">Past</option>
                   </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className={styles.formRow}>
+                  <label htmlFor="c-phone">Phone</label>
+                  <input id="c-phone" type="tel" placeholder="+1 555 010 2026" value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} />
+                </div>
+                <div className={styles.formRow}>
+                  <label htmlFor="c-notes">Notes</label>
+                  <textarea id="c-notes" placeholder="Relationship context, preferences, or next steps..." value={newClientNotes} onChange={(e) => setNewClientNotes(e.target.value)} />
                 </div>
               </div>
 

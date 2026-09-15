@@ -1,64 +1,23 @@
 .teamPage {
   position: relative;
-  padding: 40px 42px 64px;
+  padding: 34px 42px 64px;
   max-width: 1180px;
   margin: 0 auto;
 }
 
-.teamHeader {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  min-height: 206px;
-  padding: 34px 38px;
-  margin-bottom: 22px;
-  overflow: hidden;
-  border: 1px solid #284e43;
-  border-radius: 16px;
-  color: #f7f5ed;
-  background: radial-gradient(circle at 88% 18%, rgba(221, 177, 110, 0.2), transparent 26%), linear-gradient(125deg, #17382f 0%, #1e5545 62%, #276a55 100%);
-  box-shadow: 0 20px 42px rgba(25, 61, 49, 0.18);
-}
+.pageHeader { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 24px; }
+.pageHeader h1 { margin: 6px 0 5px; color: var(--foreground); font-size: 34px; font-weight: 600; letter-spacing: -0.045em; }
+.pageSubtitle { margin: 0; color: var(--ink-muted); font-size: 13px; }
 
-.teamHeader::after { position: absolute; right: 11%; bottom: -64px; width: 210px; height: 210px; border: 1px solid rgba(247, 245, 237, 0.14); border-radius: 50%; content: ""; }
-.teamHeaderCopy, .teamHeaderMeta { position: relative; z-index: 1; }
-.teamHeaderCopy { max-width: 620px; }
 .inviteButton { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 13px; border: 1px solid rgba(216, 229, 213, 0.34); border-radius: 7px; color: #17382f; background: #f7f5ed; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .inviteButton:hover:not(:disabled) { background: #fff; }
-.inviteButton:disabled { cursor: wait; opacity: 0.65; }
+.inviteButton:disabled { border-color: #d7ddd7; color: #8d978e; background: #e8ece8; cursor: not-allowed; opacity: 1; }
 .teamKicker, .tableEyebrow { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; }
 .teamKicker { color: #b9d5c1; }
+.modalHeader .teamKicker { color: var(--green); }
 .kickerDot { width: 6px; height: 6px; border-radius: 50%; background: #ddb16e; box-shadow: 0 0 0 4px rgba(221, 177, 110, 0.14); }
 
-.teamHeader h1 {
-  margin: 6px 0 8px;
-  color: #f7f5ed;
-  font-size: clamp(36px, 4.5vw, 58px);
-  line-height: 1;
-  letter-spacing: -0.045em;
-}
-.teamHeader h1 span { color: #d8e5d5; font-weight: 400; }
-
-.teamSubtitle {
-  margin: 0;
-  color: #c7d8cc;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.teamHeaderMeta { display: flex; align-items: flex-end; flex-direction: column; gap: 22px; }
-.workspacePill, .liveStatus { display: flex; align-items: center; gap: 8px; color: #d7e5d9; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.workspacePill { padding: 9px 12px; border: 1px solid rgba(216, 229, 213, 0.22); border-radius: 999px; background: rgba(9, 31, 25, 0.22); }
-.teamCount {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  color: #c7d8cc;
-}
-.teamCount strong { color: #f7f5ed; font-size: 45px; font-weight: 500; line-height: 0.9; letter-spacing: -0.05em; }
-.teamCount span { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.liveStatus { display: flex; align-items: center; gap: 8px; color: var(--green); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 
 .errorBanner {
   display: flex;
@@ -100,12 +59,20 @@
 .tableIntro { display: flex; align-items: center; justify-content: space-between; padding: 22px 24px 19px; border-bottom: 1px solid var(--line); }
 .tableEyebrow { color: var(--green); }
 .tableIntro h2 { margin: 5px 0 0; color: var(--foreground); font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+.tableIntro > div:first-child { display: grid; gap: 6px; }
+.memberSummary { display: flex; align-items: center; gap: 16px; color: var(--ink-muted); font-size: 11px; }
+.memberSummary span { display: inline-flex; align-items: baseline; gap: 4px; }
+.memberSummary strong { color: var(--foreground); font-size: 15px; }
 .liveStatus { color: var(--green); font-size: 10px; }
 .liveStatus span { width: 6px; height: 6px; border-radius: 50%; background: #5eae79; box-shadow: 0 0 0 4px rgba(94, 174, 121, 0.14); }
 .emptyMembers { display: flex; align-items: center; flex-direction: column; gap: 6px; padding: 58px 20px; color: var(--ink-muted); text-align: center; }
 .emptyMembers svg { margin-bottom: 5px; color: var(--green); }
 .emptyMembers strong { color: var(--foreground); font-size: 14px; }
 .emptyMembers span { font-size: 12px; }
+.memberControls { display: flex; align-items: center; gap: 8px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: #f7f8f3; }
+.searchField { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 180px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink-muted); background: #fff; }
+.searchField input { width: 100%; min-height: 36px; border: 0; outline: 0; color: var(--foreground); background: transparent; font: inherit; font-size: 12px; }
+.filterField select { min-height: 36px; padding: 0 28px 0 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--foreground); background: #fff; font: inherit; font-size: 12px; cursor: pointer; }
 .createWorkspaceLink { margin-top: 8px; color: var(--green); font-size: 12px; font-weight: 800; text-decoration: underline; }
 .modalOverlay { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(23, 56, 47, 0.3); }
 .modalSheet { width: min(100%, 480px); border: 1px solid var(--line); border-radius: 12px; background: #fbfaf6; box-shadow: 0 24px 60px rgba(23, 56, 47, 0.2); }
@@ -115,6 +82,8 @@
 .inviteForm p { margin: 0 0 6px; color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
 .inviteForm label { color: var(--foreground); font-size: 12px; font-weight: 700; }
 .inviteForm input { min-height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; color: var(--foreground); background: #fff; font: inherit; font-size: 13px; }
+.inviteForm input[aria-invalid="true"] { border-color: #d28a78; outline: 2px solid rgba(210, 138, 120, 0.14); }
+.inviteHint { color: #a14c3d; font-size: 11px; line-height: 1.4; }
 .modalFooter { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .secondaryButton { padding: 10px 13px; border: 1px solid var(--line); border-radius: 7px; color: var(--foreground); background: transparent; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 
@@ -180,15 +149,18 @@
 
 @media (max-width: 760px) {
   .teamPage { padding: 24px 16px 42px; }
-  .teamHeader { align-items: flex-start; flex-direction: column; }
-  .teamHeader { min-height: 0; padding: 28px 24px; }
-  .teamHeaderMeta { align-items: flex-start; flex-direction: row; justify-content: space-between; width: 100%; gap: 16px; }
+  .pageHeader { align-items: stretch; flex-direction: column; gap: 16px; padding-bottom: 20px; }
+  .pageHeader .inviteButton { width: auto; align-self: flex-start; }
   .inviteButton { width: 100%; }
   .roleStats { gap: 8px; }
   .roleStat { align-items: flex-start; flex-direction: column; gap: 9px; padding: 12px; }
   .roleStat > span:last-child { align-items: flex-start; flex-direction: column; gap: 1px; }
   .memberTableShell { overflow: visible; border: 0; background: transparent; box-shadow: none; }
   .tableIntro { padding: 20px 2px 14px; }
+  .memberSummary { display: none; }
+  .memberControls { align-items: stretch; flex-direction: column; padding: 12px; }
+  .searchField { width: auto; }
+  .filterField select { width: 100%; }
   .memberTable { overflow: visible; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, 0.52); box-shadow: 0 10px 24px rgba(38, 57, 44, 0.05); }
   .memberTableHeader { display: none; }
   .memberRow { grid-template-columns: 1fr auto; gap: 12px; padding: 16px 0; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.58); }

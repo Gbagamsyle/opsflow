@@ -23,6 +23,45 @@ export class ClientsService {
     });
   }
 
+  async findOneForUser(organizationId: string, clientId: string, userId: string) {
+    await this.requireMembership(organizationId, userId);
+
+    const client = await this.prisma.client.findFirst({
+      where: { id: clientId, organizationId },
+      include: {
+        projects: {
+          include: {
+            tasks: {
+              include: { assignee: true },
+              orderBy: [{ status: 'asc' }, { position: 'asc' }, { updatedAt: 'desc' }],
+            },
+          },
+          orderBy: { updatedAt: 'desc' },
+        },
+        invoices: { orderBy: { updatedAt: 'desc' } },
+      },
+    });
+    if (!client) throw new NotFoundException('Client not found');
+
+    const projectIds = client.projects.map((project) => project.id);
+    const taskIds = client.projects.flatMap((project) => project.tasks.map((task) => task.id));
+    const activity = await this.prisma.activityLog.findMany({
+      where: {
+        organizationId,
+        OR: [
+          { entityType: 'client', entityId: clientId },
+          ...(projectIds.length ? [{ entityType: 'project', entityId: { in: projectIds } }] : []),
+          ...(taskIds.length ? [{ entityType: 'task', entityId: { in: taskIds } }] : []),
+        ],
+      },
+      include: { actor: true },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+
+    return { ...client, activity };
+  }
+
   async createForUser(
     organizationId: string,
     userId: string,

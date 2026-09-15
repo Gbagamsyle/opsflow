@@ -27,6 +27,15 @@ export class ClientsController {
     return this.clientsService.findForUser(organizationId, user.id);
   }
 
+  @Get(':clientId')
+  findOne(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.clientsService.findOneForUser(organizationId, clientId, user.id);
+  }
+
   @Post()
   create(
     @Param('organizationId') organizationId: string,
