@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ClerkGuard } from '../auth/clerk.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -28,7 +37,12 @@ export class TasksController {
     @CurrentUser() user: { id: string },
     @Body() body: CreateTaskDto,
   ) {
-    return this.tasksService.createForProject(organizationId, projectId, user.id, body);
+    return this.tasksService.createForProject(
+      organizationId,
+      projectId,
+      user.id,
+      body,
+    );
   }
 
   @Patch(':taskId')
@@ -39,7 +53,13 @@ export class TasksController {
     @CurrentUser() user: { id: string },
     @Body() body: UpdateTaskDto,
   ) {
-    return this.tasksService.updateForProject(organizationId, projectId, taskId, user.id, body);
+    return this.tasksService.updateForProject(
+      organizationId,
+      projectId,
+      taskId,
+      user.id,
+      body,
+    );
   }
 
   @Patch(':taskId/move')
@@ -50,7 +70,13 @@ export class TasksController {
     @CurrentUser() user: { id: string },
     @Body() body: MoveTaskDto,
   ) {
-    return this.tasksService.moveForProject(organizationId, projectId, taskId, user.id, body);
+    return this.tasksService.moveForProject(
+      organizationId,
+      projectId,
+      taskId,
+      user.id,
+      body,
+    );
   }
 
   @Delete(':taskId')
@@ -60,7 +86,12 @@ export class TasksController {
     @Param('taskId') taskId: string,
     @CurrentUser() user: { id: string },
   ) {
-    return this.tasksService.deleteForProject(organizationId, projectId, taskId, user.id);
+    return this.tasksService.deleteForProject(
+      organizationId,
+      projectId,
+      taskId,
+      user.id,
+    );
   }
 
   @Get(':taskId/comments')
@@ -70,7 +101,12 @@ export class TasksController {
     @Param('taskId') taskId: string,
     @CurrentUser() user: { id: string },
   ) {
-    return this.tasksService.findComments(organizationId, projectId, taskId, user.id);
+    return this.tasksService.findComments(
+      organizationId,
+      projectId,
+      taskId,
+      user.id,
+    );
   }
 
   @Post(':taskId/comments')
@@ -81,6 +117,12 @@ export class TasksController {
     @CurrentUser() user: { id: string },
     @Body() body: CreateCommentDto,
   ) {
-    return this.tasksService.createComment(organizationId, projectId, taskId, user.id, body);
+    return this.tasksService.createComment(
+      organizationId,
+      projectId,
+      taskId,
+      user.id,
+      body,
+    );
   }
 }

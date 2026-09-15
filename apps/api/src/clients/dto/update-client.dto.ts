@@ -9,30 +9,31 @@ import {
 } from 'class-validator';
 import { ClientStatus } from '../../generated/enums';
 
-export class CreateClientDto {
+export class UpdateClientDto {
+  @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(120)
-  name!: string;
+  name?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(160)
-  companyName?: string;
+  companyName?: string | null;
 
   @IsOptional()
   @IsEmail()
   @MaxLength(254)
-  email?: string;
+  email?: string | null;
 
   @IsOptional()
   @IsPhoneNumber()
-  phone?: string;
+  phone?: string | null;
 
   @IsOptional()
   @IsString()
   @MaxLength(2000)
-  notes?: string;
+  notes?: string | null;
 
   @IsOptional()
   @IsEnum(ClientStatus)

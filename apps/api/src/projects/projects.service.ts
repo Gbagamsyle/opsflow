@@ -23,7 +23,27 @@ export class ProjectsService {
     });
   }
 
-  async createForUser(organizationId: string, userId: string, data: CreateProjectDto) {
+  async findOneForUser(
+    organizationId: string,
+    projectId: string,
+    userId: string,
+  ) {
+    await this.requireMembership(organizationId, userId);
+
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+      include: { client: true, members: { include: { user: true } } },
+    });
+
+    if (!project) throw new NotFoundException('Project not found');
+    return project;
+  }
+
+  async createForUser(
+    organizationId: string,
+    userId: string,
+    data: CreateProjectDto,
+  ) {
     await this.requireMembership(organizationId, userId);
 
     if (data.clientId) {
@@ -38,16 +58,39 @@ export class ProjectsService {
         organizationId,
         createdById: userId,
         name: data.name,
-        description: data.description === undefined ? undefined : data.description,
+        description:
+          data.description === undefined ? undefined : data.description,
         status: data.status,
-        startDate: data.startDate === undefined ? undefined : data.startDate ? new Date(data.startDate) : null,
-        dueDate: data.dueDate === undefined ? undefined : data.dueDate ? new Date(data.dueDate) : null,
+        startDate:
+          data.startDate === undefined
+            ? undefined
+            : data.startDate
+              ? new Date(data.startDate)
+              : null,
+        dueDate:
+          data.dueDate === undefined
+            ? undefined
+            : data.dueDate
+              ? new Date(data.dueDate)
+              : null,
         clientId: data.clientId === undefined ? undefined : data.clientId,
       },
       include: { client: true },
     });
-    this.realtime?.publish({ organizationId, resource: 'project', action: 'created', resourceId: project.id });
-    await this.activity?.record({ organizationId, actorId: userId, entityType: 'project', entityId: project.id, action: 'created', metadata: { name: project.name } });
+    this.realtime?.publish({
+      organizationId,
+      resource: 'project',
+      action: 'created',
+      resourceId: project.id,
+    });
+    await this.activity?.record({
+      organizationId,
+      actorId: userId,
+      entityType: 'project',
+      entityId: project.id,
+      action: 'created',
+      metadata: { name: project.name },
+    });
     return project;
   }
 
@@ -73,24 +116,64 @@ export class ProjectsService {
         name: data.name,
         description: data.description,
         status: data.status,
-        startDate: data.startDate ? new Date(data.startDate) : undefined,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-        clientId: data.clientId,
+        startDate:
+          data.startDate === undefined
+            ? undefined
+            : data.startDate
+              ? new Date(data.startDate)
+              : null,
+        dueDate:
+          data.dueDate === undefined
+            ? undefined
+            : data.dueDate
+              ? new Date(data.dueDate)
+              : null,
+        clientId: data.clientId === undefined ? undefined : data.clientId,
       },
       include: { client: true },
     });
-    this.realtime?.publish({ organizationId, resource: 'project', action: 'updated', resourceId: project.id });
-    await this.activity?.record({ organizationId, actorId: userId, entityType: 'project', entityId: project.id, action: 'updated', metadata: { name: project.name } });
+    this.realtime?.publish({
+      organizationId,
+      resource: 'project',
+      action: 'updated',
+      resourceId: project.id,
+    });
+    await this.activity?.record({
+      organizationId,
+      actorId: userId,
+      entityType: 'project',
+      entityId: project.id,
+      action: 'updated',
+      metadata: { name: project.name },
+    });
     return project;
   }
 
-  async deleteForUser(organizationId: string, projectId: string, userId: string) {
+  async deleteForUser(
+    organizationId: string,
+    projectId: string,
+    userId: string,
+  ) {
     await this.requireMembership(organizationId, userId);
     await this.requireProject(organizationId, projectId);
 
-    const project = await this.prisma.project.delete({ where: { id: projectId } });
-    this.realtime?.publish({ organizationId, resource: 'project', action: 'deleted', resourceId: project.id });
-    await this.activity?.record({ organizationId, actorId: userId, entityType: 'project', entityId: project.id, action: 'deleted', metadata: { name: project.name } });
+    const project = await this.prisma.project.delete({
+      where: { id: projectId },
+    });
+    this.realtime?.publish({
+      organizationId,
+      resource: 'project',
+      action: 'deleted',
+      resourceId: project.id,
+    });
+    await this.activity?.record({
+      organizationId,
+      actorId: userId,
+      entityType: 'project',
+      entityId: project.id,
+      action: 'deleted',
+      metadata: { name: project.name },
+    });
     return project;
   }
 

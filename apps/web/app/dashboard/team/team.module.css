@@ -25,6 +25,9 @@
 .teamHeader::after { position: absolute; right: 11%; bottom: -64px; width: 210px; height: 210px; border: 1px solid rgba(247, 245, 237, 0.14); border-radius: 50%; content: ""; }
 .teamHeaderCopy, .teamHeaderMeta { position: relative; z-index: 1; }
 .teamHeaderCopy { max-width: 620px; }
+.inviteButton { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 13px; border: 1px solid rgba(216, 229, 213, 0.34); border-radius: 7px; color: #17382f; background: #f7f5ed; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.inviteButton:hover:not(:disabled) { background: #fff; }
+.inviteButton:disabled { cursor: wait; opacity: 0.65; }
 .teamKicker, .tableEyebrow { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; }
 .teamKicker { color: #b9d5c1; }
 .kickerDot { width: 6px; height: 6px; border-radius: 50%; background: #ddb16e; box-shadow: 0 0 0 4px rgba(221, 177, 110, 0.14); }
@@ -103,6 +106,17 @@
 .emptyMembers svg { margin-bottom: 5px; color: var(--green); }
 .emptyMembers strong { color: var(--foreground); font-size: 14px; }
 .emptyMembers span { font-size: 12px; }
+.createWorkspaceLink { margin-top: 8px; color: var(--green); font-size: 12px; font-weight: 800; text-decoration: underline; }
+.modalOverlay { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(23, 56, 47, 0.3); }
+.modalSheet { width: min(100%, 480px); border: 1px solid var(--line); border-radius: 12px; background: #fbfaf6; box-shadow: 0 24px 60px rgba(23, 56, 47, 0.2); }
+.modalHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px 24px 16px; border-bottom: 1px solid var(--line); }
+.modalHeader h2 { margin: 5px 0 0; color: var(--foreground); font-size: 22px; }
+.inviteForm { display: grid; gap: 10px; padding: 22px 24px 24px; }
+.inviteForm p { margin: 0 0 6px; color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
+.inviteForm label { color: var(--foreground); font-size: 12px; font-weight: 700; }
+.inviteForm input { min-height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; color: var(--foreground); background: #fff; font: inherit; font-size: 13px; }
+.modalFooter { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.secondaryButton { padding: 10px 13px; border: 1px solid var(--line); border-radius: 7px; color: var(--foreground); background: transparent; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 
 .memberTable {
   overflow: hidden;
@@ -169,6 +183,7 @@
   .teamHeader { align-items: flex-start; flex-direction: column; }
   .teamHeader { min-height: 0; padding: 28px 24px; }
   .teamHeaderMeta { align-items: flex-start; flex-direction: row; justify-content: space-between; width: 100%; gap: 16px; }
+  .inviteButton { width: 100%; }
   .roleStats { gap: 8px; }
   .roleStat { align-items: flex-start; flex-direction: column; gap: 9px; padding: 12px; }
   .roleStat > span:last-child { align-items: flex-start; flex-direction: column; gap: 1px; }

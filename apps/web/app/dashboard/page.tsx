@@ -15,14 +15,17 @@ import {
   LayoutGrid,
   List,
   Plus,
+  Pencil,
   Search,
   Sparkles,
+  Trash2,
   TrendingUp,
   UsersRound,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./dashboard.module.css";
 import { useOrganizationRealtime } from "../../src/hooks/use-organization-realtime";
 
@@ -59,7 +62,7 @@ type Client = {
 
 type ActivityLog = {
   id: string;
-  entityType: "project" | "client" | "task" | "comment";
+  entityType: "project" | "client" | "task" | "comment" | "member";
   action: "created" | "updated" | "moved" | "deleted";
   metadata?: {
     name?: string | null;
@@ -195,6 +198,8 @@ const DEMO_TRIAGE: TriageItem[] = [
 export default function Dashboard() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Data states
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -235,6 +240,7 @@ export default function Dashboard() {
   const [newClientCompany, setNewClientCompany] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
   const [newClientStatus, setNewClientStatus] = useState<string>("ACTIVE");
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   async function refreshActivity(organizationId: string) {
     const token = await getToken();
@@ -247,7 +253,7 @@ export default function Dashboard() {
   }
 
   useOrganizationRealtime(selectedOrgId || undefined, (event) => {
-    if (event.resource !== "project" && event.resource !== "client" && event.resource !== "task" && event.resource !== "comment") return;
+    if (event.resource !== "project" && event.resource !== "client" && event.resource !== "task" && event.resource !== "comment" && event.resource !== "member") return;
 
     void (async () => {
       const token = await getToken();
@@ -263,6 +269,7 @@ export default function Dashboard() {
       setRealProjects(Array.isArray(projects) ? projects : []);
       setRealClients(Array.isArray(clients) ? clients : []);
       await refreshActivity(event.organizationId);
+      setHasUnreadActivity(true);
       setIsDemoMode(false);
     })().catch((requestError: unknown) => {
       setError(requestError instanceof Error ? requestError.message : "Failed to sync dashboard data.");
@@ -272,7 +279,8 @@ export default function Dashboard() {
   // Fetch real data on mount
   useEffect(() => {
     const syncTimer = window.setTimeout(() => {
-      setHasUnreadActivity(window.localStorage.getItem(ACTIVITY_READ_KEY) !== "true");
+      const storedOrgId = window.localStorage.getItem("opsflow-selected-org");
+      setHasUnreadActivity(window.localStorage.getItem(`${ACTIVITY_READ_KEY}:${storedOrgId ?? "none"}`) !== "true");
     }, 0);
 
     return () => window.clearTimeout(syncTimer);
@@ -295,17 +303,27 @@ export default function Dashboard() {
           throw new Error(orgBody?.message ?? "We could not load your workspace.");
         }
 
-        if (!isMounted) return;
-        setOrganizations(orgBody);
+        const normalizedOrganizations = Array.isArray(orgBody) ? orgBody : [];
 
-        const currentOrg = orgBody[0] as Organization | undefined;
-        if (currentOrg) {
-          setSelectedOrgId(currentOrg.id);
+        if (!isMounted) return;
+        setOrganizations(normalizedOrganizations);
+
+        const preferredOrgId = searchParams.get("org") ?? window.localStorage.getItem("opsflow-selected-org") ?? "";
+        const nextOrgId = normalizedOrganizations.some((org: Organization) => org.id === preferredOrgId)
+          ? preferredOrgId
+          : normalizedOrganizations[0]?.id ?? "";
+
+        if (nextOrgId) {
+          setSelectedOrgId(nextOrgId);
+          window.localStorage.setItem("opsflow-selected-org", nextOrgId);
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("org", nextOrgId);
+          router.replace(`${window.location.pathname}?${params.toString()}`);
 
           const [projRes, clientRes, activityRes] = await Promise.all([
-            fetch(`${API_URL}/organizations/${currentOrg.id}/projects`, { headers }),
-            fetch(`${API_URL}/organizations/${currentOrg.id}/clients`, { headers }),
-            fetch(`${API_URL}/organizations/${currentOrg.id}/activity?limit=8`, { headers }),
+            fetch(`${API_URL}/organizations/${nextOrgId}/projects`, { headers }),
+            fetch(`${API_URL}/organizations/${nextOrgId}/clients`, { headers }),
+            fetch(`${API_URL}/organizations/${nextOrgId}/activity?limit=8`, { headers }),
           ]);
 
           const [projBody, clientBody, activityBody] = await Promise.all([
@@ -321,11 +339,12 @@ export default function Dashboard() {
             setRealClients(fetchedClients);
             setActivity(Array.isArray(activityBody) ? activityBody : []);
 
-            // If the workspace is empty, automatically enable demo view so the dashboard looks stunning
-            if (fetchedProjects.length === 0 && fetchedClients.length === 0) {
-              setIsDemoMode(true);
-            }
           }
+        } else {
+          setSelectedOrgId("");
+          setRealProjects([]);
+          setRealClients([]);
+          setActivity([]);
         }
       } catch (err: unknown) {
         if (isMounted) {
@@ -341,7 +360,7 @@ export default function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, [getToken, isLoaded, isSignedIn]);
+  }, [getToken, isLoaded, isSignedIn, router, searchParams]);
 
   useEffect(() => {
     const collapseTimer = window.setTimeout(() => setIsActivityExpanded(false), 4500);
@@ -351,7 +370,7 @@ export default function Dashboard() {
 
   function markActivityRead() {
     setHasUnreadActivity(false);
-    window.localStorage.setItem(ACTIVITY_READ_KEY, "true");
+    window.localStorage.setItem(`${ACTIVITY_READ_KEY}:${selectedOrgId || "none"}`, "true");
   }
 
   function formatActivityTitle(item: ActivityLog) {
@@ -375,8 +394,9 @@ export default function Dashboard() {
   // Active data source
   const activeProjects = isDemoMode ? DEMO_PROJECTS : realProjects;
   const activeClients = isDemoMode ? DEMO_CLIENTS : realClients;
-  const activeWorkspace = organizations.find((o) => o.id === selectedOrgId) ?? organizations[0];
+  const activeWorkspace = organizations.find((o) => o.id === selectedOrgId) ?? organizations[0] ?? null;
   const firstName = user?.firstName ?? user?.username ?? "Operations Lead";
+  const hasWorkspace = Boolean(activeWorkspace);
 
   // Filtered and searched projects
   const filteredProjects = useMemo(() => {
@@ -492,12 +512,12 @@ export default function Dashboard() {
         status: newClientStatus,
       };
 
-      if (newClientCompany.trim()) payload.companyName = newClientCompany.trim();
-      if (newClientEmail.trim()) payload.email = newClientEmail.trim();
+      if (newClientCompany.trim() || editingClient) payload.companyName = newClientCompany.trim() || null;
+      if (newClientEmail.trim() || editingClient) payload.email = newClientEmail.trim() || null;
 
       const targetOrgId = activeWorkspace?.id ?? "default";
-      const res = await fetch(`${API_URL}/organizations/${targetOrgId}/clients`, {
-        method: "POST",
+      const res = await fetch(`${API_URL}/organizations/${targetOrgId}/clients${editingClient ? `/${editingClient.id}` : ""}`, {
+        method: editingClient ? "PATCH" : "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -507,24 +527,45 @@ export default function Dashboard() {
 
       const body = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(body?.message ?? "Unable to add client.");
+        throw new Error(body?.message ?? (editingClient ? "Unable to update client." : "Unable to add client."));
       }
 
-      const createdClient: Client = {
+      const savedClient: Client = {
         ...body,
-        projectsCount: 0,
+        projectsCount: body?.projectsCount ?? editingClient?.projectsCount ?? 0,
       };
 
-      setRealClients((prev) => [createdClient, ...prev]);
+      setRealClients((prev) => editingClient
+        ? prev.map((client) => client.id === savedClient.id ? savedClient : client)
+        : [savedClient, ...prev]);
       setIsDemoMode(false);
       setIsClientModalOpen(false);
+      setEditingClient(null);
       setNewClientName("");
       setNewClientCompany("");
       setNewClientEmail("");
     } catch (err: unknown) {
-      setModalError(err instanceof Error ? err.message : "Failed to add client.");
+      setModalError(err instanceof Error ? err.message : editingClient ? "Failed to update client." : "Failed to add client.");
     } finally {
       setModalSubmitting(false);
+    }
+  }
+
+  async function handleDeleteClient(client: Client) {
+    if (!activeWorkspace || isDemoMode || !window.confirm(`Delete "${client.name}"?`)) return;
+
+    setError("");
+    try {
+      const token = await getToken();
+      const response = await fetch(`${API_URL}/organizations/${activeWorkspace.id}/clients/${client.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.message ?? "Unable to delete client.");
+      setRealClients((prev) => prev.filter((item) => item.id !== client.id));
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : "Unable to delete client.");
     }
   }
 
@@ -545,6 +586,20 @@ export default function Dashboard() {
     );
   }
 
+  if (!hasWorkspace) {
+    return (
+      <div className={styles.emptyStation}>
+        <div className={styles.emptyIconBox}><Building2 size={22} aria-hidden="true" /></div>
+        <h4>No workspace selected</h4>
+        <p>Create your first workspace to begin tracking projects, clients, and team work.</p>
+        <Link href="/" className={styles.primaryAction}>
+          <Plus size={14} aria-hidden="true" />
+          <span>Create workspace</span>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* ---------------- TOP BAR ---------------- */}
@@ -557,6 +612,25 @@ export default function Dashboard() {
         </div>
 
         <div className={styles.topBarRight}>
+          {organizations.length > 1 && (
+            <label className={styles.workspacePicker}>
+              <span className={styles.workspacePickerLabel}>Workspace</span>
+              <select
+                value={selectedOrgId}
+                onChange={(event) => {
+                  const nextOrgId = event.target.value;
+                  setSelectedOrgId(nextOrgId);
+                  window.localStorage.setItem("opsflow-selected-org", nextOrgId);
+                  router.replace(`/dashboard?org=${nextOrgId}`);
+                }}
+              >
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>{organization.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <button
             type="button"
             className={`${styles.demoToggleBtn} ${isDemoMode ? styles.demoActive : ""}`}
@@ -1021,6 +1095,11 @@ export default function Dashboard() {
                 className={styles.widgetActionLink}
                 onClick={() => {
                   setModalError("");
+                  setEditingClient(null);
+                  setNewClientName("");
+                  setNewClientCompany("");
+                  setNewClientEmail("");
+                  setNewClientStatus("ACTIVE");
                   setIsClientModalOpen(true);
                 }}
               >
@@ -1052,6 +1131,18 @@ export default function Dashboard() {
                   >
                     {client.status}
                   </span>
+                  {!isDemoMode && <div className={styles.clientRowActions}>
+                    <button type="button" className={styles.projectIconButton} onClick={() => {
+                      setEditingClient(client);
+                      setNewClientName(client.name);
+                      setNewClientCompany(client.companyName ?? "");
+                      setNewClientEmail(client.email ?? "");
+                      setNewClientStatus(client.status);
+                      setModalError("");
+                      setIsClientModalOpen(true);
+                    }} aria-label={`Edit ${client.name}`}><Pencil size={13} /></button>
+                    <button type="button" className={styles.projectIconButton} onClick={() => void handleDeleteClient(client)} aria-label={`Delete ${client.name}`}><Trash2 size={13} /></button>
+                  </div>}
                 </div>
               ))}
             </div>
@@ -1154,7 +1245,7 @@ export default function Dashboard() {
                     onChange={(e) => setNewProjectClientId(e.target.value)}
                   >
                     <option value="">Internal Workspace</option>
-                    {activeClients.map((c) => (
+                    {realClients.map((c) => (
                       <option value={c.id} key={c.id}>
                         {c.name} {c.companyName ? `(${c.companyName})` : ""}
                       </option>
@@ -1207,7 +1298,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ---------------- MODAL: CREATE CLIENT ---------------- */}
+      {/* ---------------- MODAL: CREATE OR EDIT CLIENT ---------------- */}
       {isClientModalOpen && (
         <div
           className={styles.modalOverlay}
@@ -1222,7 +1313,7 @@ export default function Dashboard() {
             <div className={styles.modalHeader}>
               <div>
                 <p className={styles.overline}>RELATIONSHIPS</p>
-                <h3 id="modal-client-title">Add Partner Contact</h3>
+                <h3 id="modal-client-title">{editingClient ? "Edit Partner Contact" : "Add Partner Contact"}</h3>
               </div>
               <button
                 type="button"

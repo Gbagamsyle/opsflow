@@ -4,9 +4,16 @@
   "scripts": {
     "dev": "concurrently \"npm --prefix apps/api run dev\" \"npm --prefix apps/web run dev\"",
     "dev:api": "npm --prefix apps/api run dev",
-    "dev:web": "npm --prefix apps/web run dev"
+    "dev:web": "npm --prefix apps/web run dev",
+    "build:api": "npm --prefix apps/api run build",
+    "build:web": "npm --prefix apps/web run build",
+    "test:api": "npm --prefix apps/api test -- --runInBand",
+    "lint:api": "npm --prefix apps/api run lint",
+    "e2e": "playwright test",
+    "ci:smoke": "npm run build:api && npm run test:api && npm run build:web"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "concurrently": "^9.1.2"
   }
 }

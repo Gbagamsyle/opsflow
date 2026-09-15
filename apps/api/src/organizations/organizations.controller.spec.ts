@@ -62,8 +62,8 @@ describe('OrganizationsController', () => {
     await expect(
       controller.getCurrentOrganization({ id: 'user-1' }),
     ).resolves.toEqual({ organization: { id: 'org-1' }, role: 'OWNER' });
-    expect(
-      organizationsService.findCurrentOrganization,
-    ).toHaveBeenCalledWith('user-1');
+    expect(organizationsService.findCurrentOrganization).toHaveBeenCalledWith(
+      'user-1',
+    );
   });
 });

@@ -1,7 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Post,
+  Param,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { ClerkGuard } from '../auth/clerk.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
+import { InviteMemberDto } from './dto/invite-member.dto';
 import { TeamService } from './team.service';
 
 @Controller('organizations/:organizationId/members')
@@ -17,6 +27,15 @@ export class TeamController {
     return this.teamService.findMembers(organizationId, user.id);
   }
 
+  @Post('invites')
+  invite(
+    @Param('organizationId') organizationId: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: InviteMemberDto,
+  ) {
+    return this.teamService.inviteMember(organizationId, user.id, body);
+  }
+
   @Patch(':userId/role')
   updateRole(
     @Param('organizationId') organizationId: string,
@@ -24,7 +43,12 @@ export class TeamController {
     @CurrentUser() user: { id: string },
     @Body() body: UpdateMemberRoleDto,
   ) {
-    return this.teamService.updateMemberRole(organizationId, targetUserId, user.id, body);
+    return this.teamService.updateMemberRole(
+      organizationId,
+      targetUserId,
+      user.id,
+      body,
+    );
   }
 
   @Delete(':userId')

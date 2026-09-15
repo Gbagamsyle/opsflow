@@ -32,7 +32,7 @@ export default function Home() {
       const response = await fetch(`${API_URL}/organizations`, { headers: { Authorization: `Bearer ${token}` } });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.message ?? "We could not load your workspace.");
-      setOrganizations(body);
+      setOrganizations(Array.isArray(body) ? body : []);
       setLoading(false);
     })().catch((reason: unknown) => {
       setError(reason instanceof Error ? reason.message : "Something went wrong.");
@@ -53,7 +53,8 @@ export default function Home() {
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.message ?? "We could not create your workspace.");
-      router.push("/dashboard");
+      const createdOrganizationId = body?.id;
+      router.push(createdOrganizationId ? `/dashboard?org=${createdOrganizationId}` : "/dashboard");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Something went wrong.");
     } finally {
@@ -68,7 +69,7 @@ export default function Home() {
     <div className={styles.eyebrow}><span className={styles.brand}><span className={styles.mark}>O</span> OPSFLOW</span><span className={styles.headerNote}>YOUR OPERATIONS SPACE</span></div>
       <div className={styles.content}>
         <div className={styles.intro}><p className={styles.kicker}>Workspace setup</p><h1>{organizations.length > 0 ? <>Your workspaces,<br /><em>all in one place.</em></> : <>Build a home<br />for <em>good work.</em></>}</h1><p className={styles.lede}>{organizations.length > 0 ? "You already have a workspace ready. Open it, or create a new space for another team." : "A focused space for your projects, people, and the momentum between them."}</p></div>
-        {organizations.length > 0 && <div className={styles.existing}><p className={styles.sectionLabel}>Your workspaces</p>{organizations.map((organization) => <Link className={styles.organization} href="/dashboard" key={organization.id}><span>{organization.name.slice(0, 1).toUpperCase()}</span><div><strong>{organization.name}</strong><small>{organization.slug}</small></div><ArrowUpRight className={styles.rowIcon} aria-hidden="true" /></Link>)}</div>}
+        {organizations.length > 0 && <div className={styles.existing}><p className={styles.sectionLabel}>Your workspaces</p>{organizations.map((organization) => <Link className={styles.organization} href={`/dashboard?org=${organization.id}`} key={organization.id}><span>{organization.name.slice(0, 1).toUpperCase()}</span><div><strong>{organization.name}</strong><small>{organization.slug}</small></div><ArrowUpRight className={styles.rowIcon} aria-hidden="true" /></Link>)}</div>}
         <form onSubmit={createOrganization} className={styles.form}><div className={styles.formTitle}><span>{organizations.length > 0 ? "New workspace" : "Name your workspace"}</span><small>Free to start</small></div><label htmlFor="workspace">Workspace name</label><div className={styles.inputRow}><input id="workspace" required minLength={2} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Syle Tech" autoComplete="organization" /><button disabled={submitting || !slug}>{submitting ? "Creating..." : "Create workspace"}<ArrowUpRight size={17} aria-hidden="true" /></button></div><div className={styles.inputMeta}><small>{slug ? `opsflow.local / ${slug}` : "Your name becomes a simple workspace address"}</small>{slug && <span>Available</span>}</div>{error && <p className={styles.error} role="alert">{error}</p>}</form>
         <div className={styles.promise}><Sparkles size={18} aria-hidden="true" /><p><strong>Everything in one rhythm.</strong><br />Projects, tasks, clients, and invoices live together.</p></div>
       </div><footer><span>Built for teams that move with intent.</span><span>© 2026 OPSFLOW</span></footer>

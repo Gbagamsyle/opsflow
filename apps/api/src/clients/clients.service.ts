@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
+import { UpdateClientDto } from './dto/update-client.dto';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ActivityService } from '../activity/activity.service';
 
@@ -22,15 +23,94 @@ export class ClientsService {
     });
   }
 
-  async createForUser(organizationId: string, userId: string, data: CreateClientDto) {
+  async createForUser(
+    organizationId: string,
+    userId: string,
+    data: CreateClientDto,
+  ) {
     await this.requireMembership(organizationId, userId);
 
     const client = await this.prisma.client.create({
       data: { organizationId, ...data },
     });
-    this.realtime?.publish({ organizationId, resource: 'client', action: 'created', resourceId: client.id });
-    await this.activity?.record({ organizationId, actorId: userId, entityType: 'client', entityId: client.id, action: 'created', metadata: { name: client.name } });
+    this.realtime?.publish({
+      organizationId,
+      resource: 'client',
+      action: 'created',
+      resourceId: client.id,
+    });
+    await this.activity?.record({
+      organizationId,
+      actorId: userId,
+      entityType: 'client',
+      entityId: client.id,
+      action: 'created',
+      metadata: { name: client.name },
+    });
     return client;
+  }
+
+  async updateForUser(
+    organizationId: string,
+    clientId: string,
+    userId: string,
+    data: UpdateClientDto,
+  ) {
+    await this.requireMembership(organizationId, userId);
+    await this.requireClient(organizationId, clientId);
+
+    const client = await this.prisma.client.update({
+      where: { id: clientId },
+      data,
+    });
+    this.realtime?.publish({
+      organizationId,
+      resource: 'client',
+      action: 'updated',
+      resourceId: client.id,
+    });
+    await this.activity?.record({
+      organizationId,
+      actorId: userId,
+      entityType: 'client',
+      entityId: client.id,
+      action: 'updated',
+      metadata: { name: client.name },
+    });
+    return client;
+  }
+
+  async deleteForUser(
+    organizationId: string,
+    clientId: string,
+    userId: string,
+  ) {
+    await this.requireMembership(organizationId, userId);
+    await this.requireClient(organizationId, clientId);
+
+    const client = await this.prisma.client.delete({ where: { id: clientId } });
+    this.realtime?.publish({
+      organizationId,
+      resource: 'client',
+      action: 'deleted',
+      resourceId: client.id,
+    });
+    await this.activity?.record({
+      organizationId,
+      actorId: userId,
+      entityType: 'client',
+      entityId: client.id,
+      action: 'deleted',
+      metadata: { name: client.name },
+    });
+    return client;
+  }
+
+  private async requireClient(organizationId: string, clientId: string) {
+    const client = await this.prisma.client.findFirst({
+      where: { id: clientId, organizationId },
+    });
+    if (!client) throw new NotFoundException('Client not found');
   }
 
   private async requireMembership(organizationId: string, userId: string) {

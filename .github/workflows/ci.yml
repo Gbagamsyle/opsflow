@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: opsflow
+          POSTGRES_PASSWORD: opsflow
+          POSTGRES_DB: opsflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U opsflow -d opsflow"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://opsflow:opsflow@localhost:5432/opsflow?schema=public
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:4000
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm --prefix apps/api ci
+      - run: npm --prefix apps/web ci
+
+      - name: Generate Prisma client
+        run: npm --prefix apps/api exec prisma -- generate --config apps/api/prisma.config.ts
+
+      - name: Apply database migrations
+        run: npm --prefix apps/api exec prisma -- migrate deploy --config apps/api/prisma.config.ts
+
+      - name: API lint
+        run: npm run lint:api
+
+      - name: API build and tests
+        run: npm run test:api && npm run build:api
+
+      - name: Web build
+        run: npm run build:web
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser smoke
+        run: npm run e2e

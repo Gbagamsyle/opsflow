@@ -4,7 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 export type ActivityRecord = {
   organizationId: string;
   actorId: string;
-  entityType: 'project' | 'client' | 'task' | 'comment';
+  entityType: 'project' | 'client' | 'task' | 'comment' | 'member';
   entityId: string;
   action: 'created' | 'updated' | 'moved' | 'deleted';
   metadata?: Record<string, string | null>;

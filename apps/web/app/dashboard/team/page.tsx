@@ -1,8 +1,9 @@
 "use client";
 
 import { useAuth, useUser } from "@clerk/nextjs";
-import { AlertCircle, Check, ShieldCheck, Trash2, UserRound, UsersRound, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, Check, MailPlus, ShieldCheck, Trash2, UserRound, UsersRound, X } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useCurrentOrganization } from "../../../src/hooks/use-current-organization";
 import { useOrganizationRealtime } from "../../../src/hooks/use-organization-realtime";
 import { apiRequest } from "../../../src/lib/api";
@@ -44,6 +45,10 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
 
   const canManage = currentRole === "OWNER" || currentRole === "ADMIN";
 
@@ -110,6 +115,26 @@ export default function TeamPage() {
     }
   }
 
+  async function inviteMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!organization || !canManage || !inviteEmail.trim()) return;
+    setIsInviting(true);
+    setInviteError("");
+    try {
+      await apiRequest(`/organizations/${organization.id}/members/invites`, getToken, {
+        method: "POST",
+        json: { email: inviteEmail.trim().toLowerCase() },
+      });
+      await loadMembers(organization.id);
+      setInviteEmail("");
+      setIsInviteOpen(false);
+    } catch (requestError: unknown) {
+      setInviteError(requestError instanceof Error ? requestError.message : "Unable to invite member.");
+    } finally {
+      setIsInviting(false);
+    }
+  }
+
   if (!isLoaded || organizationLoading || loading) {
     return <div className={styles.loadingState}>Loading team...</div>;
   }
@@ -117,6 +142,7 @@ export default function TeamPage() {
   if (!isSignedIn) {
     return <div className={styles.loadingState}>Sign in to access your team.</div>;
   }
+  if (!organization) return <div className={styles.emptyMembers}><UsersRound size={22} aria-hidden="true" /><strong>No workspace selected</strong><span>Create a workspace before inviting or managing team members.</span><Link href="/" className={styles.createWorkspaceLink}>Create workspace</Link></div>;
 
   const ownerCount = members.filter((member) => member.role === "OWNER").length;
   const adminCount = members.filter((member) => member.role === "ADMIN").length;
@@ -129,6 +155,7 @@ export default function TeamPage() {
           <h1>Team <span>directory</span></h1>
           <p className={styles.teamSubtitle}>The people and permissions behind {organization?.name ?? "your workspace"}.</p>
         </div>
+        {canManage && <button type="button" className={styles.inviteButton} onClick={() => { setInviteError(""); setIsInviteOpen(true); }}><MailPlus size={15} aria-hidden="true" /> Invite member</button>}
       </header>
 
       {(organizationError || error) && (
@@ -188,6 +215,19 @@ export default function TeamPage() {
       </div>
 
       {!canManage && <p className={styles.permissionNote}><UserRound size={14} aria-hidden="true" /> Only workspace owners and admins can change roles or remove members.</p>}
+
+      {isInviteOpen && <div className={styles.modalOverlay} role="dialog" aria-modal="true" aria-labelledby="invite-member-title" onClick={(event) => { if (event.target === event.currentTarget) setIsInviteOpen(false); }}>
+        <div className={styles.modalSheet}>
+          <div className={styles.modalHeader}><div><p className={styles.teamKicker}>WORKSPACE ACCESS</p><h2 id="invite-member-title">Invite a member</h2></div><button type="button" className={styles.closeButton} onClick={() => setIsInviteOpen(false)} aria-label="Close invite dialog"><X size={16} /></button></div>
+          <form className={styles.inviteForm} onSubmit={inviteMember}>
+            <p>Invite an existing Opsflow user by email. They will join as a member immediately.</p>
+            {inviteError && <div className={styles.errorBanner} role="alert"><span><AlertCircle size={15} aria-hidden="true" /> {inviteError}</span></div>}
+            <label htmlFor="invite-email">Email address</label>
+            <input id="invite-email" type="email" required value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="teammate@example.com" autoFocus />
+            <div className={styles.modalFooter}><button type="button" className={styles.secondaryButton} onClick={() => setIsInviteOpen(false)}>Cancel</button><button type="submit" className={styles.inviteButton} disabled={isInviting}>{isInviting ? "Adding..." : "Add member"}</button></div>
+          </form>
+        </div>
+      </div>}
     </section>
   );
 }

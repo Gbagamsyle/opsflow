@@ -53,10 +53,15 @@ describe('TasksService', () => {
           { id: 'task-3', status: 'TODO', position: 2 },
         ]),
         update: jest.fn().mockResolvedValue({}),
-        findUnique: jest.fn().mockResolvedValue({ id: 'task-2', status: 'TODO', position: 0 }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 'task-2', status: 'TODO', position: 0 }),
       },
     };
-    prisma.$transaction.mockImplementation((callback: (client: typeof transaction) => unknown) => callback(transaction));
+    prisma.$transaction.mockImplementation(
+      (callback: (client: typeof transaction) => unknown) =>
+        callback(transaction),
+    );
 
     await service.moveForProject('org-1', 'project-1', 'task-2', 'user-1', {
       status: 'TODO',
@@ -78,7 +83,8 @@ describe('TasksService', () => {
     authorizeTask();
     const transaction = {
       task: {
-        findMany: jest.fn()
+        findMany: jest
+          .fn()
           .mockResolvedValueOnce([
             { id: 'task-1', status: 'TODO', position: 0 },
             { id: 'task-2', status: 'TODO', position: 1 },
@@ -87,10 +93,15 @@ describe('TasksService', () => {
             { id: 'task-3', status: 'DONE', position: 0 },
           ]),
         update: jest.fn().mockResolvedValue({}),
-        findUnique: jest.fn().mockResolvedValue({ id: 'task-2', status: 'DONE', position: 1 }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 'task-2', status: 'DONE', position: 1 }),
       },
     };
-    prisma.$transaction.mockImplementation((callback: (client: typeof transaction) => unknown) => callback(transaction));
+    prisma.$transaction.mockImplementation(
+      (callback: (client: typeof transaction) => unknown) =>
+        callback(transaction),
+    );
 
     await service.moveForProject('org-1', 'project-1', 'task-2', 'user-1', {
       status: 'DONE',

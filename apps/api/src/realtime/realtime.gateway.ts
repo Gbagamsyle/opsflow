@@ -19,7 +19,9 @@ type AuthenticatedSocket = Socket & { userId?: string };
 @WebSocketGateway({
   cors: { origin: 'http://localhost:3000', credentials: true },
 })
-export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class RealtimeGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server!: Server;
 
@@ -29,16 +31,23 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly realtimeService: RealtimeService,
   ) {
     this.realtimeService.events.on('changed', (event: RealtimeEvent) => {
-      this.server?.to(this.organizationRoom(event.organizationId)).emit('organization:changed', event);
+      this.server
+        ?.to(this.organizationRoom(event.organizationId))
+        .emit('organization:changed', event);
     });
   }
 
   async handleConnection(socket: AuthenticatedSocket) {
     try {
       const token = this.extractToken(socket);
-      const payload = await verifyToken(token, { secretKey: process.env['CLERK_SECRET_KEY'] });
+      const payload = await verifyToken(token, {
+        secretKey: process.env['CLERK_SECRET_KEY'],
+      });
       const user = await this.usersService.findByClerkId(payload.sub);
-      if (!user) throw new UnauthorizedException('User account has not been synchronized');
+      if (!user)
+        throw new UnauthorizedException(
+          'User account has not been synchronized',
+        );
       socket.userId = user.id;
     } catch {
       socket.disconnect(true);
@@ -57,7 +66,12 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     if (!socket.userId || !body?.organizationId) return { ok: false };
 
     const membership = await this.prisma.membership.findUnique({
-      where: { userId_organizationId: { userId: socket.userId, organizationId: body.organizationId } },
+      where: {
+        userId_organizationId: {
+          userId: socket.userId,
+          organizationId: body.organizationId,
+        },
+      },
     });
     if (!membership) return { ok: false };
 
@@ -70,13 +84,22 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   private extractToken(socket: Socket) {
-    const authToken = socket.handshake.auth?.token;
-    const authorization = socket.handshake.headers.authorization;
-    const token = typeof authToken === 'string'
-      ? authToken
-      : typeof authorization === 'string' && authorization.startsWith('Bearer ')
-        ? authorization.substring(7)
+    const auth = socket.handshake.auth as unknown;
+    const authToken =
+      typeof auth === 'object' &&
+      auth !== null &&
+      'token' in auth &&
+      typeof auth.token === 'string'
+        ? auth.token
         : null;
+    const authorization = socket.handshake.headers.authorization;
+    const token =
+      typeof authToken === 'string'
+        ? authToken
+        : typeof authorization === 'string' &&
+            authorization.startsWith('Bearer ')
+          ? authorization.substring(7)
+          : null;
     if (!token) throw new UnauthorizedException('Missing authentication token');
     return token;
   }

@@ -17,10 +17,12 @@ Opsflow is a workspace and operations platform for client work, project delivery
 
 ## Quick start
 
-Install dependencies at the repo root:
+Install dependencies at the repo root and in each app:
 
 ```bash
 npm install
+npm --prefix apps/api install
+npm --prefix apps/web install
 ```
 
 Run both apps in development mode:
@@ -40,6 +42,8 @@ npm run dev:web
 
 ### API
 
+Copy `apps/api/.env.example` to `apps/api/.env` and set a PostgreSQL connection plus a Clerk secret key.
+
 ```bash
 cd apps/api
 npm install
@@ -49,6 +53,8 @@ npm run dev
 The API runs on the configured NestJS development server, typically on port 4000 unless your environment overrides it.
 
 ### Web app
+
+Copy `apps/web/.env.example` to `apps/web/.env.local` and set the API origin plus Clerk publishable key.
 
 ```bash
 cd apps/web
@@ -60,12 +66,7 @@ The web app runs on the default Next.js port, usually http://localhost:3000.
 
 ## Environment setup
 
-Create local environment files as needed for your machine:
-
-- API: likely `.env` with database and Clerk-related variables
-- Web: local API URL and Clerk settings as required by the app
-
-Do not commit secrets or local environment files.
+The complete local and deployment checklist is in [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md). Never commit `.env` or `.env.local` files or secret values.
 
 ## Design and product guidance
 
@@ -78,6 +79,9 @@ From the repo root:
 - `npm run dev` — start API + web together
 - `npm run dev:api` — start only the backend
 - `npm run dev:web` — start only the frontend
+- `npm run ci:smoke` — build the API and web apps and run API tests
+- `npm run e2e` — run Playwright browser smoke checks against the web app
+- `npm run lint:api` — run API ESLint checks
 
 ## Status
 

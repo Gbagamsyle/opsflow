@@ -14,6 +14,10 @@ export class ActivityController {
     @CurrentUser() user: { id: string },
     @Query('limit') limit?: string,
   ) {
-    return this.activityService.findForUser(organizationId, user.id, Number(limit) || 30);
+    return this.activityService.findForUser(
+      organizationId,
+      user.id,
+      Number(limit) || 30,
+    );
   }
 }

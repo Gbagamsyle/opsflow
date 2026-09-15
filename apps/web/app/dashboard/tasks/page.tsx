@@ -6,6 +6,7 @@ import { closestCorners, DndContext, DragEndEvent, useDroppable } from "@dnd-kit
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useCurrentOrganization } from "../../../src/hooks/use-current-organization";
 import { useOrganizationRealtime } from "../../../src/hooks/use-organization-realtime";
 import { apiRequest } from "../../../src/lib/api";
@@ -138,12 +139,23 @@ export default function TasksPage() {
         ),
       ),
     );
-    setTasks(taskGroups.flat());
+    const refreshedTasks = taskGroups.flat();
+    setTasks(refreshedTasks);
+    setSelectedTask((current) => current ? refreshedTasks.find((task) => task.id === current.id) ?? null : null);
+  }
+
+  async function refreshWorkspaceProjects(organizationId: string) {
+    const projectList = await apiRequest<Project[]>(`/organizations/${organizationId}/projects`, getToken);
+    setProjects(projectList);
+    await refreshTasks(organizationId, projectList);
   }
 
   useOrganizationRealtime(organization?.id, (event) => {
-    if (event.resource !== "task" && event.resource !== "project") return;
-    void refreshTasks(event.organizationId, projects).catch((requestError: unknown) => {
+    if (event.resource !== "task" && event.resource !== "project" && event.resource !== "comment") return;
+    const refresh = event.resource === "project"
+      ? refreshWorkspaceProjects(event.organizationId)
+      : refreshTasks(event.organizationId, projects);
+    void refresh.catch((requestError: unknown) => {
       setError(requestError instanceof Error ? requestError.message : "Unable to sync tasks.");
     });
   });
@@ -349,6 +361,7 @@ export default function TasksPage() {
     return <div className={styles.loadingState}>Loading tasks...</div>;
   }
   if (!isSignedIn) return <div className={styles.loadingState}>Sign in to access your tasks.</div>;
+  if (!organization) return <div className={styles.emptyStation}><div className={styles.emptyIconBox}><ListTodo size={22} aria-hidden="true" /></div><h4>No workspace selected</h4><p>Create a workspace before organizing tasks.</p><Link href="/" className={styles.primaryAction}><Plus size={14} aria-hidden="true" /><span>Create workspace</span></Link></div>;
 
   return (
     <section className={styles.projectsPage}>

@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ClerkGuard } from '../auth/clerk.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -18,6 +27,19 @@ export class ProjectsController {
     return this.projectsService.findForUser(organizationId, user.id);
   }
 
+  @Get(':projectId')
+  findOne(
+    @Param('organizationId') organizationId: string,
+    @Param('projectId') projectId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.projectsService.findOneForUser(
+      organizationId,
+      projectId,
+      user.id,
+    );
+  }
+
   @Post()
   create(
     @Param('organizationId') organizationId: string,
@@ -34,7 +56,12 @@ export class ProjectsController {
     @CurrentUser() user: { id: string },
     @Body() body: UpdateProjectDto,
   ) {
-    return this.projectsService.updateForUser(organizationId, projectId, user.id, body);
+    return this.projectsService.updateForUser(
+      organizationId,
+      projectId,
+      user.id,
+      body,
+    );
   }
 
   @Delete(':projectId')
@@ -43,6 +70,10 @@ export class ProjectsController {
     @Param('projectId') projectId: string,
     @CurrentUser() user: { id: string },
   ) {
-    return this.projectsService.deleteForUser(organizationId, projectId, user.id);
+    return this.projectsService.deleteForUser(
+      organizationId,
+      projectId,
+      user.id,
+    );
   }
 }

@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { AlertCircle, Calendar, FolderKanban, Pencil, Plus, Trash2, UsersRound, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrentOrganization } from "../../../src/hooks/use-current-organization";
 import { useOrganizationRealtime } from "../../../src/hooks/use-organization-realtime";
@@ -182,6 +183,10 @@ export default function ProjectsPage() {
 
   if (!isSignedIn) {
     return <div className={styles.loadingState}>Sign in to access your projects.</div>;
+  }
+
+  if (!organization) {
+    return <div className={styles.emptyStation}><div className={styles.emptyIconBox}><FolderKanban size={22} aria-hidden="true" /></div><h4>No workspace selected</h4><p>Create a workspace before managing projects.</p><Link href="/" className={styles.primaryAction}><Plus size={14} aria-hidden="true" /><span>Create workspace</span></Link></div>;
   }
 
   return (

@@ -1,4 +1,12 @@
-import { IsDateString, IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { TaskPriority, TaskStatus } from '../../generated/enums';
 
 export class UpdateTaskDto {
@@ -26,6 +34,6 @@ export class UpdateTaskDto {
   dueDate?: string | null;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   assigneeId?: string | null;
 }
