@@ -24,6 +24,7 @@ import {
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import styles from "./dashboard.module.css";
+import { useOrganizationRealtime } from "../../src/hooks/use-organization-realtime";
 
 type Organization = {
   id: string;
@@ -56,11 +57,17 @@ type Client = {
   projectsCount?: number;
 };
 
-type ActivityItem = {
+type ActivityLog = {
   id: string;
-  title: string;
-  time: string;
-  type: "project" | "client" | "task" | "system";
+  entityType: "project" | "client" | "task" | "comment";
+  action: "created" | "updated" | "moved" | "deleted";
+  metadata?: {
+    name?: string | null;
+    fromStatus?: string | null;
+    toStatus?: string | null;
+  } | null;
+  createdAt: string;
+  actor?: { firstName?: string | null; lastName?: string | null; email?: string | null } | null;
 };
 
 type TriageItem = {
@@ -161,33 +168,6 @@ const DEMO_CLIENTS: Client[] = [
   },
 ];
 
-const DEMO_ACTIVITY: ActivityItem[] = [
-  {
-    id: "act-1",
-    title: "Elena signed off on Milestone 2 for Apex Mobile",
-    time: "12m ago",
-    type: "project",
-  },
-  {
-    id: "act-2",
-    title: "Marcus reviewed Design System token specifications",
-    time: "48m ago",
-    type: "task",
-  },
-  {
-    id: "act-3",
-    title: "New client Vertex Logix onboarded as Lead partner",
-    time: "2h ago",
-    type: "client",
-  },
-  {
-    id: "act-4",
-    title: "Customer Onboarding Portal MVP marked Completed",
-    time: "5h ago",
-    type: "system",
-  },
-];
-
 const DEMO_TRIAGE: TriageItem[] = [
   {
     id: "tr-1",
@@ -221,15 +201,14 @@ export default function Dashboard() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [realProjects, setRealProjects] = useState<Project[]>([]);
   const [realClients, setRealClients] = useState<Client[]>([]);
+  const [activity, setActivity] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // Demo Toggle Mode
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isActivityExpanded, setIsActivityExpanded] = useState(true);
-  const [hasUnreadActivity, setHasUnreadActivity] = useState(() =>
-    typeof window === "undefined" || window.localStorage.getItem(ACTIVITY_READ_KEY) !== "true"
-  );
+  const [hasUnreadActivity, setHasUnreadActivity] = useState(true);
 
   // View Mode: 'list' | 'cards' | 'timeline'
   const [viewMode, setViewMode] = useState<"list" | "cards" | "timeline">("list");
@@ -257,7 +236,48 @@ export default function Dashboard() {
   const [newClientEmail, setNewClientEmail] = useState("");
   const [newClientStatus, setNewClientStatus] = useState<string>("ACTIVE");
 
+  async function refreshActivity(organizationId: string) {
+    const token = await getToken();
+    const response = await fetch(`${API_URL}/organizations/${organizationId}/activity?limit=8`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await response.json().catch(() => []);
+    if (!response.ok) throw new Error(body?.message ?? "Failed to load activity.");
+    setActivity(Array.isArray(body) ? body : []);
+  }
+
+  useOrganizationRealtime(selectedOrgId || undefined, (event) => {
+    if (event.resource !== "project" && event.resource !== "client" && event.resource !== "task" && event.resource !== "comment") return;
+
+    void (async () => {
+      const token = await getToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      const [projectsResponse, clientsResponse] = await Promise.all([
+        fetch(`${API_URL}/organizations/${event.organizationId}/projects`, { headers }),
+        fetch(`${API_URL}/organizations/${event.organizationId}/clients`, { headers }),
+      ]);
+      const [projects, clients] = await Promise.all([
+        projectsResponse.json().catch(() => []),
+        clientsResponse.json().catch(() => []),
+      ]);
+      setRealProjects(Array.isArray(projects) ? projects : []);
+      setRealClients(Array.isArray(clients) ? clients : []);
+      await refreshActivity(event.organizationId);
+      setIsDemoMode(false);
+    })().catch((requestError: unknown) => {
+      setError(requestError instanceof Error ? requestError.message : "Failed to sync dashboard data.");
+    });
+  });
+
   // Fetch real data on mount
+  useEffect(() => {
+    const syncTimer = window.setTimeout(() => {
+      setHasUnreadActivity(window.localStorage.getItem(ACTIVITY_READ_KEY) !== "true");
+    }, 0);
+
+    return () => window.clearTimeout(syncTimer);
+  }, []);
+
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
 
@@ -282,14 +302,16 @@ export default function Dashboard() {
         if (currentOrg) {
           setSelectedOrgId(currentOrg.id);
 
-          const [projRes, clientRes] = await Promise.all([
+          const [projRes, clientRes, activityRes] = await Promise.all([
             fetch(`${API_URL}/organizations/${currentOrg.id}/projects`, { headers }),
             fetch(`${API_URL}/organizations/${currentOrg.id}/clients`, { headers }),
+            fetch(`${API_URL}/organizations/${currentOrg.id}/activity?limit=8`, { headers }),
           ]);
 
-          const [projBody, clientBody] = await Promise.all([
+          const [projBody, clientBody, activityBody] = await Promise.all([
             projRes.json().catch(() => []),
             clientRes.json().catch(() => []),
+            activityRes.json().catch(() => []),
           ]);
 
           if (isMounted) {
@@ -297,6 +319,7 @@ export default function Dashboard() {
             const fetchedClients = Array.isArray(clientBody) ? clientBody : [];
             setRealProjects(fetchedProjects);
             setRealClients(fetchedClients);
+            setActivity(Array.isArray(activityBody) ? activityBody : []);
 
             // If the workspace is empty, automatically enable demo view so the dashboard looks stunning
             if (fetchedProjects.length === 0 && fetchedClients.length === 0) {
@@ -329,6 +352,24 @@ export default function Dashboard() {
   function markActivityRead() {
     setHasUnreadActivity(false);
     window.localStorage.setItem(ACTIVITY_READ_KEY, "true");
+  }
+
+  function formatActivityTitle(item: ActivityLog) {
+    const actor = [item.actor?.firstName, item.actor?.lastName].filter(Boolean).join(" ") || item.actor?.email || "Someone";
+    const subject = item.metadata?.name ?? item.entityType;
+    const action = item.action === "moved" && item.metadata?.toStatus
+      ? `moved ${subject} from ${item.metadata.fromStatus?.replaceAll("_", " ") ?? "an earlier status"} to ${item.metadata.toStatus.replaceAll("_", " ")}`
+      : `${item.action} ${subject}`;
+    return `${actor} ${action}`;
+  }
+
+  function formatActivityTime(createdAt: string) {
+    return new Date(createdAt).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   }
 
   // Active data source
@@ -1033,19 +1074,19 @@ export default function Dashboard() {
         <span className={styles.activityToastSummary}>
           <span className={styles.activityDot} />
           <span>Recent activity</span>
-          {hasUnreadActivity && <small>{DEMO_ACTIVITY.length} new</small>}
+          {hasUnreadActivity && activity.length > 0 && <small>{activity.length} new</small>}
         </span>
 
         {isActivityExpanded && (
           <span className={styles.activityToastList}>
-            {DEMO_ACTIVITY.map((act) => (
+            {activity.length > 0 ? activity.map((act) => (
               <span className={styles.activityRow} key={act.id}>
                 <span className={styles.activityDetails}>
-                  <span>{act.title}</span>
-                  <small>{act.time}</small>
+                  <span>{formatActivityTitle(act)}</span>
+                  <small>{formatActivityTime(act.createdAt)}</small>
                 </span>
               </span>
-            ))}
+            )) : <span className={styles.activityRow}><span className={styles.activityDetails}><span>No workspace activity yet</span><small>Actions will appear here</small></span></span>}
           </span>
         )}
       </button>

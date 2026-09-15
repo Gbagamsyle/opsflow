@@ -1,11 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { RealtimeService } from '../realtime/realtime.service';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly realtime?: RealtimeService,
+    @Optional() private readonly activity?: ActivityService,
+  ) {}
 
   async findForUser(organizationId: string, userId: string) {
     await this.requireMembership(organizationId, userId);
@@ -27,7 +33,7 @@ export class ProjectsService {
       if (!client) throw new NotFoundException('Client not found');
     }
 
-    return this.prisma.project.create({
+    const project = await this.prisma.project.create({
       data: {
         organizationId,
         createdById: userId,
@@ -40,6 +46,9 @@ export class ProjectsService {
       },
       include: { client: true },
     });
+    this.realtime?.publish({ organizationId, resource: 'project', action: 'created', resourceId: project.id });
+    await this.activity?.record({ organizationId, actorId: userId, entityType: 'project', entityId: project.id, action: 'created', metadata: { name: project.name } });
+    return project;
   }
 
   async updateForUser(
@@ -58,7 +67,7 @@ export class ProjectsService {
       if (!client) throw new NotFoundException('Client not found');
     }
 
-    return this.prisma.project.update({
+    const project = await this.prisma.project.update({
       where: { id: projectId },
       data: {
         name: data.name,
@@ -70,13 +79,19 @@ export class ProjectsService {
       },
       include: { client: true },
     });
+    this.realtime?.publish({ organizationId, resource: 'project', action: 'updated', resourceId: project.id });
+    await this.activity?.record({ organizationId, actorId: userId, entityType: 'project', entityId: project.id, action: 'updated', metadata: { name: project.name } });
+    return project;
   }
 
   async deleteForUser(organizationId: string, projectId: string, userId: string) {
     await this.requireMembership(organizationId, userId);
     await this.requireProject(organizationId, projectId);
 
-    return this.prisma.project.delete({ where: { id: projectId } });
+    const project = await this.prisma.project.delete({ where: { id: projectId } });
+    this.realtime?.publish({ organizationId, resource: 'project', action: 'deleted', resourceId: project.id });
+    await this.activity?.record({ organizationId, actorId: userId, entityType: 'project', entityId: project.id, action: 'deleted', metadata: { name: project.name } });
+    return project;
   }
 
   private async requireProject(organizationId: string, projectId: string) {

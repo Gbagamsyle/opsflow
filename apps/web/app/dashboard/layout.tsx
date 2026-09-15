@@ -14,12 +14,21 @@ import {
   UsersRound,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
 import styles from "./dashboard.module.css";
 
 export default function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { user } = useUser();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const pathname = usePathname();
+  const activeTab: string = pathname === "/dashboard"
+    ? "dashboard"
+    : pathname.startsWith("/dashboard/projects")
+      ? "projects"
+      : pathname.startsWith("/dashboard/tasks")
+        ? "tasks"
+        : pathname.startsWith("/dashboard/team")
+          ? "team"
+        : "dashboard";
   const firstName = user?.firstName ?? user?.username ?? "Personal";
   const workspaceLabel = `${firstName}'s Workspace`;
 
@@ -44,7 +53,6 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
           <Link
             className={`${styles.navItem} ${activeTab === "dashboard" ? styles.navItemActive : ""}`}
             href="/dashboard"
-            onClick={() => setActiveTab("dashboard")}
           >
             <LayoutDashboard className={styles.navIcon} aria-hidden="true" />
             <span>Dashboard</span>
@@ -52,7 +60,6 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
           <Link
             className={`${styles.navItem} ${activeTab === "projects" ? styles.navItemActive : ""}`}
             href="/dashboard/projects"
-            onClick={() => setActiveTab("projects")}
           >
             <FolderKanban className={styles.navIcon} aria-hidden="true" />
             <span>Projects</span>
@@ -60,26 +67,23 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
           <Link
             className={`${styles.navItem} ${activeTab === "tasks" ? styles.navItemActive : ""}`}
             href="/dashboard/tasks"
-            onClick={() => setActiveTab("tasks")}
           >
             <ListTodo className={styles.navIcon} aria-hidden="true" />
             <span>Tasks</span>
           </Link>
-          <button
-            type="button"
-            className={`${styles.navItem} ${activeTab === "clients" ? styles.navItemActive : ""}`}
-            onClick={() => setActiveTab("clients")}
+          <Link
+            className={`${styles.navItem} ${activeTab === "team" ? styles.navItemActive : ""}`}
+            href="/dashboard/team"
           >
             <UsersRound className={styles.navIcon} aria-hidden="true" />
-            <span>Clients</span>
-          </button>
+            <span>Team</span>
+          </Link>
         </nav>
 
         <nav className={styles.utilityNav} aria-label="Settings and help">
           <button
             type="button"
             className={`${styles.navItem} ${activeTab === "timeline" ? styles.navItemActive : ""}`}
-            onClick={() => setActiveTab("timeline")}
           >
             <BriefcaseBusiness className={styles.navIcon} aria-hidden="true" />
             <span>Timeline</span>
@@ -87,7 +91,6 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
           <button
             type="button"
             className={`${styles.navItem} ${activeTab === "integrations" ? styles.navItemActive : ""}`}
-            onClick={() => setActiveTab("integrations")}
           >
             <Link2 className={styles.navIcon} aria-hidden="true" />
             <span>Integrations</span>
@@ -95,7 +98,6 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
           <button
             type="button"
             className={`${styles.navItem} ${activeTab === "support" ? styles.navItemActive : ""}`}
-            onClick={() => setActiveTab("support")}
           >
             <CircleHelp className={styles.navIcon} aria-hidden="true" />
             <span>Help &amp; Docs</span>
@@ -103,7 +105,6 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
           <button
             type="button"
             className={`${styles.navItem} ${activeTab === "settings" ? styles.navItemActive : ""}`}
-            onClick={() => setActiveTab("settings")}
           >
             <Settings className={styles.navIcon} aria-hidden="true" />
             <span>Settings</span>

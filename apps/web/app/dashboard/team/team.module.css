@@ -1,0 +1,183 @@
+.teamPage {
+  position: relative;
+  padding: 40px 42px 64px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.teamHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 206px;
+  padding: 34px 38px;
+  margin-bottom: 22px;
+  overflow: hidden;
+  border: 1px solid #284e43;
+  border-radius: 16px;
+  color: #f7f5ed;
+  background: radial-gradient(circle at 88% 18%, rgba(221, 177, 110, 0.2), transparent 26%), linear-gradient(125deg, #17382f 0%, #1e5545 62%, #276a55 100%);
+  box-shadow: 0 20px 42px rgba(25, 61, 49, 0.18);
+}
+
+.teamHeader::after { position: absolute; right: 11%; bottom: -64px; width: 210px; height: 210px; border: 1px solid rgba(247, 245, 237, 0.14); border-radius: 50%; content: ""; }
+.teamHeaderCopy, .teamHeaderMeta { position: relative; z-index: 1; }
+.teamHeaderCopy { max-width: 620px; }
+.teamKicker, .tableEyebrow { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; }
+.teamKicker { color: #b9d5c1; }
+.kickerDot { width: 6px; height: 6px; border-radius: 50%; background: #ddb16e; box-shadow: 0 0 0 4px rgba(221, 177, 110, 0.14); }
+
+.teamHeader h1 {
+  margin: 6px 0 8px;
+  color: #f7f5ed;
+  font-size: clamp(36px, 4.5vw, 58px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+.teamHeader h1 span { color: #d8e5d5; font-weight: 400; }
+
+.teamSubtitle {
+  margin: 0;
+  color: #c7d8cc;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.teamHeaderMeta { display: flex; align-items: flex-end; flex-direction: column; gap: 22px; }
+.workspacePill, .liveStatus { display: flex; align-items: center; gap: 8px; color: #d7e5d9; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.workspacePill { padding: 9px 12px; border: 1px solid rgba(216, 229, 213, 0.22); border-radius: 999px; background: rgba(9, 31, 25, 0.22); }
+.teamCount {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  color: #c7d8cc;
+}
+.teamCount strong { color: #f7f5ed; font-size: 45px; font-weight: 500; line-height: 0.9; letter-spacing: -0.05em; }
+.teamCount span { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border: 1px solid #e8b9aa;
+  border-radius: 7px;
+  color: #8b3e2e;
+  background: #fff4ef;
+  font-size: 13px;
+}
+
+.errorBanner > span { display: flex; align-items: center; gap: 8px; }
+.closeButton, .removeButton {
+  display: grid;
+  place-items: center;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.closeButton { padding: 3px; }
+.closeButton:hover { background: rgba(139, 62, 46, 0.1); }
+
+.roleStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 22px; }
+.roleStat { display: flex; align-items: center; gap: 12px; padding: 15px 17px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, 0.58); box-shadow: 0 8px 18px rgba(38, 57, 44, 0.035); }
+.statIcon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; }
+.roleStat > span:last-child { display: flex; align-items: baseline; gap: 8px; }
+.roleStat strong { color: var(--foreground); font-size: 22px; font-weight: 600; letter-spacing: -0.04em; }
+.roleStat small { color: var(--ink-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.roleStatOwner .statIcon { color: #95652e; background: #f5eadb; }
+.roleStatAdmin .statIcon { color: #315c72; background: #e2edf1; }
+.roleStatMember .statIcon { color: var(--green); background: #e4eee5; }
+
+.memberTableShell { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, 0.52); box-shadow: 0 16px 35px rgba(38, 57, 44, 0.07); }
+.tableIntro { display: flex; align-items: center; justify-content: space-between; padding: 22px 24px 19px; border-bottom: 1px solid var(--line); }
+.tableEyebrow { color: var(--green); }
+.tableIntro h2 { margin: 5px 0 0; color: var(--foreground); font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+.liveStatus { color: var(--green); font-size: 10px; }
+.liveStatus span { width: 6px; height: 6px; border-radius: 50%; background: #5eae79; box-shadow: 0 0 0 4px rgba(94, 174, 121, 0.14); }
+.emptyMembers { display: flex; align-items: center; flex-direction: column; gap: 6px; padding: 58px 20px; color: var(--ink-muted); text-align: center; }
+.emptyMembers svg { margin-bottom: 5px; color: var(--green); }
+.emptyMembers strong { color: var(--foreground); font-size: 14px; }
+.emptyMembers span { font-size: 12px; }
+
+.memberTable {
+  overflow: hidden;
+}
+
+.memberTableHeader, .memberRow {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.8fr) minmax(120px, 0.8fr) minmax(130px, 0.8fr) minmax(170px, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 15px 20px;
+}
+
+.memberTableHeader {
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-muted);
+  background: #eef3ee;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.memberRow { min-height: 82px; border-bottom: 1px solid var(--line); transition: background 160ms ease; }
+.memberRow:last-child { border-bottom: 0; }
+.memberRow:hover { background: rgba(238, 243, 238, 0.62); }
+
+.memberIdentity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.memberIdentity > span:last-child { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.memberIdentity strong { overflow: hidden; color: var(--foreground); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.memberIdentity small { overflow: hidden; color: var(--ink-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.memberAvatar { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; overflow: hidden; border: 2px solid #fff; border-radius: 50%; color: #fff; background: var(--green); box-shadow: 0 3px 8px rgba(28, 74, 57, 0.15); font-size: 13px; font-weight: 700; }
+.memberAvatarImage { width: 100%; height: 100%; background-position: center; background-size: cover; }
+
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  color: var(--green);
+  background: #e4eee5;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.roleOWNER { color: #875528; background: #f5eadb; }
+.roleADMIN { color: #315c72; background: #e2edf1; }
+.roleProtected { border: 1px solid #e3c79d; }
+.joinedDate { color: var(--ink-muted); font-size: 13px; }
+.memberActions { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; }
+.memberActions select { min-width: 100px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--foreground); background: #fff; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.memberActions select:disabled { opacity: 0.6; }
+.removeButton { padding: 7px; border-radius: 5px; color: #a14c3d; }
+.removeButton:hover:not(:disabled) { background: #fff0ec; }
+.removeButton:disabled { cursor: not-allowed; opacity: 0.45; }
+.protectedLabel { color: var(--ink-muted); font-size: 11px; }
+.savingIndicator { display: grid; place-items: center; color: var(--green); }
+.permissionNote { display: flex; align-items: center; gap: 7px; margin: 14px 0 0; color: var(--ink-muted); font-size: 12px; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@media (max-width: 760px) {
+  .teamPage { padding: 24px 16px 42px; }
+  .teamHeader { align-items: flex-start; flex-direction: column; }
+  .teamHeader { min-height: 0; padding: 28px 24px; }
+  .teamHeaderMeta { align-items: flex-start; flex-direction: row; justify-content: space-between; width: 100%; gap: 16px; }
+  .roleStats { gap: 8px; }
+  .roleStat { align-items: flex-start; flex-direction: column; gap: 9px; padding: 12px; }
+  .roleStat > span:last-child { align-items: flex-start; flex-direction: column; gap: 1px; }
+  .memberTableShell { overflow: visible; border: 0; background: transparent; box-shadow: none; }
+  .tableIntro { padding: 20px 2px 14px; }
+  .memberTable { overflow: visible; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, 0.52); box-shadow: 0 10px 24px rgba(38, 57, 44, 0.05); }
+  .memberTableHeader { display: none; }
+  .memberRow { grid-template-columns: 1fr auto; gap: 12px; padding: 16px 0; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.58); }
+  .memberIdentity { grid-column: 1 / -1; }
+  .joinedDate { grid-column: 1; }
+  .memberActions { grid-column: 2; grid-row: 2; }
+}

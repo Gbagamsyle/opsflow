@@ -5,6 +5,7 @@ import { AlertCircle, Calendar, FolderKanban, Pencil, Plus, Trash2, UsersRound, 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentOrganization } from "../../../src/hooks/use-current-organization";
+import { useOrganizationRealtime } from "../../../src/hooks/use-organization-realtime";
 import { apiRequest } from "../../../src/lib/api";
 import styles from "../dashboard.module.css";
 
@@ -53,6 +54,20 @@ export default function ProjectsPage() {
     );
     setProjects(refreshedProjects);
   }
+
+  async function refreshClients(organizationId: string) {
+    setClients(await apiRequest<Client[]>(`/organizations/${organizationId}/clients`, getToken));
+  }
+
+  useOrganizationRealtime(organization?.id, (event) => {
+    if (event.resource !== "project" && event.resource !== "client") return;
+    void Promise.all([
+      refreshProjects(event.organizationId),
+      refreshClients(event.organizationId),
+    ]).catch((requestError: unknown) => {
+      setError(requestError instanceof Error ? requestError.message : "Unable to sync projects.");
+    });
+  });
 
   useEffect(() => {
     const organizationId = organization?.id;

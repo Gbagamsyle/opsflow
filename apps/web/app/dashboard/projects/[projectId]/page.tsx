@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../../../src/lib/api";
+import { useOrganizationRealtime } from "../../../../src/hooks/use-organization-realtime";
 import styles from "../../dashboard.module.css";
 
 type Project = {
@@ -45,6 +46,19 @@ export default function ProjectWorkspacePage() {
   const [organizationId, setOrganizationId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useOrganizationRealtime(organizationId || undefined, (event) => {
+    if (event.resource !== "task" && event.resource !== "project") return;
+    void Promise.all([
+      apiRequest<Project>(`/organizations/${organizationId}/projects/${projectId}`, getToken),
+      apiRequest<Task[]>(`/organizations/${organizationId}/projects/${projectId}/tasks`, getToken),
+    ]).then(([projectData, taskData]) => {
+      setProject(projectData);
+      setTasks(taskData);
+    }).catch((requestError: unknown) => {
+      setError(requestError instanceof Error ? requestError.message : "Unable to sync project workspace.");
+    });
+  });
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !projectId) return;

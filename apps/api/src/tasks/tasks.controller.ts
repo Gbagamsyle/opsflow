@@ -4,6 +4,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
 import { TasksService } from './tasks.service';
 
 @Controller('organizations/:organizationId/projects/:projectId/tasks')
@@ -60,5 +61,26 @@ export class TasksController {
     @CurrentUser() user: { id: string },
   ) {
     return this.tasksService.deleteForProject(organizationId, projectId, taskId, user.id);
+  }
+
+  @Get(':taskId/comments')
+  comments(
+    @Param('organizationId') organizationId: string,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.tasksService.findComments(organizationId, projectId, taskId, user.id);
+  }
+
+  @Post(':taskId/comments')
+  addComment(
+    @Param('organizationId') organizationId: string,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: CreateCommentDto,
+  ) {
+    return this.tasksService.createComment(organizationId, projectId, taskId, user.id, body);
   }
 }

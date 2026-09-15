@@ -1,77 +1,84 @@
-# OpsFlow
+# Opsflow
 
-**OpsFlow is a full-stack SaaS operations platform for managing projects, clients, tasks, teams, and business workflows in one centralized workspace.**
+Opsflow is a workspace and operations platform for client work, project delivery, and team coordination. The product combines a project dashboard, client records, task tracking, and realtime activity updates into a single operational workspace.
 
-It is designed around the operational needs of modern teams that need more than a basic task manager. OpsFlow brings project management, client management, Kanban workflows, activity tracking, comments, organization-based access, and real-time updates together in a single application.
+## Overview
 
-The project demonstrates how a production-oriented business application can be structured across a modern frontend, modular backend, relational database, authentication layer, and real-time communication system.
+- API: NestJS + Prisma + PostgreSQL
+- Web app: Next.js + React + Clerk authentication
+- Design system: documented in [DESIGN.md](DESIGN.md)
+- Monorepo structure: root scripts for running both apps together
 
-## Core Capabilities
+## Repository layout
 
-* **Organization Management** — Manage users, memberships, and organization-level data.
-* **Project Management** — Create and manage projects with clients, members, and associated tasks.
-* **Task Management** — Create, assign, prioritize, filter, and track tasks through different workflow states.
-* **Kanban Workflow** — Move tasks between To Do, In Progress, Review, and Done stages.
-* **Client Management** — Track business clients and connect them with projects.
-* **Comments & Collaboration** — Support communication around tasks and project work.
-* **Activity Tracking** — Maintain visibility into important actions and changes across the workspace.
-* **Real-Time Updates** — Use event-driven communication to keep connected users synchronized.
-* **Authentication & Authorization** — Secure application access and organization-scoped resources.
-* **Responsive Dashboard** — Provide a centralized view of operational activity and team work.
+- [apps/api](apps/api): backend service and Prisma database layer
+- [apps/web](apps/web): frontend dashboard and client experience
+- [DESIGN.md](DESIGN.md): product design system and interface rules
 
-## Engineering Focus
+## Quick start
 
-OpsFlow was built to explore real-world full-stack engineering concerns including:
+Install dependencies at the repo root:
 
-* SaaS architecture
-* Multi-tenant organization design
-* REST API development
-* Relational database modeling
-* Authentication and authorization
-* Real-time application architecture
-* Event-driven communication
-* CRUD and workflow operations
-* Kanban state management
-* Modular backend architecture
-* Frontend state synchronization
-* Scalable project structure
-* Responsive business application design
+```bash
+npm install
+```
 
-## Tech Stack
+Run both apps in development mode:
 
-**Frontend**
+```bash
+npm run dev
+```
 
-* React / Next.js
-* TypeScript
-* Tailwind CSS
+Or run them individually:
 
-**Backend**
+```bash
+npm run dev:api
+npm run dev:web
+```
 
-* NestJS
-* TypeScript
-* REST APIs
-* Socket.IO
+## Local development
 
-**Database**
+### API
 
-* PostgreSQL
-* Prisma ORM
+```bash
+cd apps/api
+npm install
+npm run dev
+```
 
-**Authentication**
+The API runs on the configured NestJS development server, typically on port 4000 unless your environment overrides it.
 
-* Clerk
+### Web app
 
-**Architecture**
+```bash
+cd apps/web
+npm install
+npm run dev
+```
 
-* Modular monorepo
-* Event-driven real-time updates
-* Organization-scoped data access
-* API-first communication between frontend and backend
+The web app runs on the default Next.js port, usually http://localhost:3000.
 
-## Why I Built It
+## Environment setup
 
-OpsFlow was built as a practical exploration of how modern SaaS and internal business applications are designed and developed.
+Create local environment files as needed for your machine:
 
-Rather than building another basic CRUD project, the goal was to create a system with real business workflows, organization-level access, relational data, real-time updates, and a structure that could be extended into a larger operations platform.
+- API: likely `.env` with database and Clerk-related variables
+- Web: local API URL and Clerk settings as required by the app
 
-The project also serves as a demonstration of full-stack engineering across frontend architecture, backend APIs, authentication, database design, and real-time application communication.
+Do not commit secrets or local environment files.
+
+## Design and product guidance
+
+The shared product and visual rules live in [DESIGN.md](DESIGN.md). Any new screen or workflow should follow that document so the workspace, dashboard, and product surfaces remain consistent.
+
+## Scripts
+
+From the repo root:
+
+- `npm run dev` — start API + web together
+- `npm run dev:api` — start only the backend
+- `npm run dev:web` — start only the frontend
+
+## Status
+
+This repository is currently under active product development. The app structure is in place, but the repo should be kept tidy and the documentation should match the project rather than default starter templates.

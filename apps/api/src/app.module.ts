@@ -8,6 +8,9 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ClientsModule } from './clients/clients.module';
 import { TasksModule } from './tasks/tasks.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { ActivityModule } from './activity/activity.module';
+import { TeamModule } from './team/team.module';
 
 @Module({
   imports: [
@@ -19,6 +22,9 @@ import { TasksModule } from './tasks/tasks.module';
     ProjectsModule,
     ClientsModule,
     TasksModule,
+    RealtimeModule,
+    ActivityModule,
+    TeamModule,
   ],
   controllers: [HealthController],
 })

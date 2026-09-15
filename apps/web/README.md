@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Opsflow Web
 
-## Getting Started
+This is the frontend for Opsflow, built with Next.js and designed around the product and dashboard patterns described in [../../DESIGN.md](../../DESIGN.md).
 
-First, run the development server:
+## Stack
+
+- Next.js
+- React
+- TypeScript
+- Clerk auth
+- Socket.IO client
+- CSS Modules and route-scoped styling
+
+## Local setup
+
+From this directory:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app defaults to the standard Next.js local development URL:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Main app structure
 
-## Learn More
+- app/auth: authentication entry flow
+- app/dashboard: workspace and operational dashboard views
+- src/hooks: client-side state and realtime hooks
+- src/lib: shared utilities and client helpers
 
-To learn more about Next.js, take a look at the following resources:
+## Working with the dashboard
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The dashboard is the primary product experience and should stay aligned with the design system in [../../DESIGN.md](../../DESIGN.md). Keep navigation, data states, spacing, and controls consistent with the product language.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment variables
 
-## Deploy on Vercel
+Set any required local environment keys for Clerk and the backend API URL, such as:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- NEXT_PUBLIC_API_URL
+- Clerk public configuration values
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Do not commit local environment files.
+
+## Notes
+
+This frontend is meant to run with the API app in the same workspace during local development.

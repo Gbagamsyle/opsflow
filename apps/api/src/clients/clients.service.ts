@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
+import { RealtimeService } from '../realtime/realtime.service';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class ClientsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly realtime?: RealtimeService,
+    @Optional() private readonly activity?: ActivityService,
+  ) {}
 
   async findForUser(organizationId: string, userId: string) {
     await this.requireMembership(organizationId, userId);
@@ -19,9 +25,12 @@ export class ClientsService {
   async createForUser(organizationId: string, userId: string, data: CreateClientDto) {
     await this.requireMembership(organizationId, userId);
 
-    return this.prisma.client.create({
+    const client = await this.prisma.client.create({
       data: { organizationId, ...data },
     });
+    this.realtime?.publish({ organizationId, resource: 'client', action: 'created', resourceId: client.id });
+    await this.activity?.record({ organizationId, actorId: userId, entityType: 'client', entityId: client.id, action: 'created', metadata: { name: client.name } });
+    return client;
   }
 
   private async requireMembership(organizationId: string, userId: string) {

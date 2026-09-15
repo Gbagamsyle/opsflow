@@ -1073,6 +1073,75 @@
   gap: 12px;
 }
 
+.taskDetailsMeta,
+.taskCommentsHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.taskDetailsDescription {
+  margin: 2px 0 4px;
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.taskComments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.taskCommentsHeader {
+  justify-content: space-between;
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.taskComment {
+  padding: 9px 10px;
+  border-left: 2px solid var(--line);
+  background: #f7f8f4;
+}
+
+.taskComment strong {
+  color: var(--foreground);
+  font-size: 11px;
+}
+
+.taskComment p {
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.commentForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.commentForm textarea {
+  flex: 1;
+  min-height: 52px;
+  resize: vertical;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--foreground);
+  background: #fffefa;
+  font: inherit;
+  font-size: 12px;
+}
+
 .progressPill {
   display: flex;
   align-items: center;

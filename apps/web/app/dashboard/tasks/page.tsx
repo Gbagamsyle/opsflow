@@ -2,24 +2,29 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { Calendar, CheckCircle2, Circle, ListTodo, Pencil, Plus, Trash2, X } from "lucide-react";
-import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
+import { closestCorners, DndContext, DragEndEvent, useDroppable } from "@dnd-kit/core";
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { FormEvent, useEffect, useState } from "react";
 import { useCurrentOrganization } from "../../../src/hooks/use-current-organization";
+import { useOrganizationRealtime } from "../../../src/hooks/use-organization-realtime";
 import { apiRequest } from "../../../src/lib/api";
 import styles from "../dashboard.module.css";
 
 type Project = { id: string; name: string };
 type TeamMember = { id: string; firstName?: string | null; lastName?: string | null; email?: string };
+type TaskComment = { id: string; body: string; createdAt: string; user?: TeamMember | null };
 type Task = {
   id: string;
   title: string;
   description?: string | null;
   status: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  position: number;
   dueDate?: string | null;
   assignee?: TeamMember | null;
   project: Project;
+  comments?: TaskComment[];
 };
 
 const statusLabels: Record<Task["status"], string> = {
@@ -36,22 +41,24 @@ function DraggableTaskCard({
   onEdit,
   onDelete,
   onToggle,
+  onDetails,
 }: {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onToggle: (task: Task) => void;
+  onDetails: (task: Task) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
-  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.45 : 1 };
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.45 : 1 };
 
   return (
-    <article ref={setNodeRef} style={style} className={styles.kanbanCard} {...listeners} {...attributes}>
+    <article ref={setNodeRef} style={style} className={styles.kanbanCard} onClick={() => onDetails(task)} {...listeners} {...attributes}>
       <div className={styles.kanbanCardHeader}>
         <span className={`${styles.taskPriority} ${styles[`taskPriority${task.priority}`]}`}>{task.priority}</span>
         <div className={styles.kanbanCardActions}>
-          <button type="button" className={styles.projectIconButton} onPointerDown={(event) => event.stopPropagation()} onClick={() => onEdit(task)} aria-label={`Edit ${task.title}`}><Pencil size={13} /></button>
-          <button type="button" className={styles.projectIconButton} onPointerDown={(event) => event.stopPropagation()} onClick={() => onDelete(task)} aria-label={`Delete ${task.title}`}><Trash2 size={13} /></button>
+          <button type="button" className={styles.projectIconButton} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onEdit(task); }} aria-label={`Edit ${task.title}`}><Pencil size={13} /></button>
+          <button type="button" className={styles.projectIconButton} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onDelete(task); }} aria-label={`Delete ${task.title}`}><Trash2 size={13} /></button>
         </div>
       </div>
       <strong className={styles.kanbanCardTitle}>{task.title}</strong>
@@ -60,7 +67,7 @@ function DraggableTaskCard({
       {task.assignee && <span className={styles.kanbanCardProject}>{[task.assignee.firstName, task.assignee.lastName].filter(Boolean).join(" ") || task.assignee.email}</span>}
       {task.dueDate && <span className={styles.kanbanCardProject}><Calendar size={11} /> Due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
       <div className={styles.kanbanCardFooter}>
-        <button type="button" className={styles.taskCompleteButton} onPointerDown={(event) => event.stopPropagation()} onClick={() => onToggle(task)} aria-label={`Mark ${task.title} ${task.status === "DONE" ? "open" : "done"}`}>
+        <button type="button" className={styles.taskCompleteButton} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onToggle(task); }} aria-label={`Mark ${task.title} ${task.status === "DONE" ? "open" : "done"}`}>
           {task.status === "DONE" ? <CheckCircle2 size={14} /> : <Circle size={14} />}
         </button>
         <span className={styles.taskStatusSelect}>{statusLabels[task.status]}</span>
@@ -69,13 +76,14 @@ function DraggableTaskCard({
   );
 }
 
-function DroppableColumn({ status, tasks, onAdd, onEdit, onDelete, onToggle }: {
+function DroppableColumn({ status, tasks, onAdd, onEdit, onDelete, onToggle, onDetails }: {
   status: Task["status"];
   tasks: Task[];
   onAdd: (status: Task["status"]) => void;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onToggle: (task: Task) => void;
+  onDetails: (task: Task) => void;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
 
@@ -86,7 +94,11 @@ function DroppableColumn({ status, tasks, onAdd, onEdit, onDelete, onToggle }: {
         <button type="button" className={styles.kanbanAddButton} onClick={() => onAdd(status)} aria-label={`Add task to ${statusLabels[status]}`}><Plus size={12} /></button>
       </header>
       <div className={styles.kanbanCards}>
-        {tasks.length > 0 ? tasks.map((task) => <DraggableTaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} />) : <p className={styles.kanbanEmpty}>No tasks here</p>}
+        {tasks.length > 0 ? (
+          <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+            {tasks.map((task) => <DraggableTaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} onDetails={onDetails} />)}
+          </SortableContext>
+        ) : <p className={styles.kanbanEmpty}>No tasks here</p>}
       </div>
     </section>
   );
@@ -110,6 +122,9 @@ export default function TasksPage() {
   const [status, setStatus] = useState<Task["status"]>("TODO");
   const [dueDate, setDueDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [commentBody, setCommentBody] = useState("");
+  const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [projectFilter, setProjectFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [assigneeFilter, setAssigneeFilter] = useState("ALL");
@@ -125,6 +140,13 @@ export default function TasksPage() {
     );
     setTasks(taskGroups.flat());
   }
+
+  useOrganizationRealtime(organization?.id, (event) => {
+    if (event.resource !== "task" && event.resource !== "project") return;
+    void refreshTasks(event.organizationId, projects).catch((requestError: unknown) => {
+      setError(requestError instanceof Error ? requestError.message : "Unable to sync tasks.");
+    });
+  });
 
   function resetTaskForm() {
     setEditingTask(null);
@@ -245,11 +267,52 @@ export default function TasksPage() {
     }
   }
 
-  async function moveTask(task: Task, status: Task["status"]) {
-    if (!organization || task.status === status) return;
+  async function addComment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!organization || !selectedTask || !commentBody.trim()) return;
+    setIsCommentSubmitting(true);
+    try {
+      const comment = await apiRequest<TaskComment>(
+        `/organizations/${organization.id}/projects/${selectedTask.project.id}/tasks/${selectedTask.id}/comments`,
+        getToken,
+        { method: "POST", json: { body: commentBody.trim() } },
+      );
+      const updatedTask = { ...selectedTask, comments: [...(selectedTask.comments ?? []), comment] };
+      setSelectedTask(updatedTask);
+      setTasks((current) => current.map((task) => task.id === updatedTask.id ? updatedTask : task));
+      setCommentBody("");
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to add comment.");
+    } finally {
+      setIsCommentSubmitting(false);
+    }
+  }
 
-    const position = tasks.filter((candidate) => candidate.status === status).length;
-    setTasks((current) => current.map((candidate) => candidate.id === task.id ? { ...candidate, status } : candidate));
+  async function moveTask(task: Task, status: Task["status"], position: number) {
+    if (!organization) return;
+
+    setTasks((current) => {
+      const columns = Object.fromEntries(taskStatuses.map((columnStatus) => [
+        columnStatus,
+        current.filter((candidate) => candidate.status === columnStatus),
+      ])) as Record<Task["status"], Task[]>;
+      const sourceColumn = columns[task.status];
+      const targetColumn = columns[status];
+      const sourceIndex = sourceColumn.findIndex((candidate) => candidate.id === task.id);
+      if (sourceIndex < 0) return current;
+
+      if (task.status === status) {
+        columns[status] = arrayMove(sourceColumn, sourceIndex, Math.min(position, sourceColumn.length - 1));
+      } else {
+        sourceColumn.splice(sourceIndex, 1);
+        targetColumn.splice(Math.min(position, targetColumn.length), 0, { ...task, status });
+      }
+
+      return taskStatuses.flatMap((columnStatus) => columns[columnStatus].map((candidate, index) => ({
+        ...candidate,
+        position: index,
+      })));
+    });
 
     try {
       await apiRequest(`/organizations/${organization.id}/projects/${task.project.id}/tasks/${task.id}/move`, getToken, {
@@ -264,10 +327,16 @@ export default function TasksPage() {
 
   function handleDragEnd(event: DragEndEvent) {
     const task = tasks.find((candidate) => candidate.id === event.active.id);
-    const targetStatus = typeof event.over?.id === "string" && taskStatuses.includes(event.over.id as Task["status"])
-      ? event.over.id as Task["status"]
-      : null;
-    if (task && targetStatus) void moveTask(task, targetStatus);
+    if (!task || !event.over || typeof event.over.id !== "string") return;
+
+    const overTask = tasks.find((candidate) => candidate.id === event.over?.id);
+    const targetStatus = overTask?.status ?? (taskStatuses.includes(event.over.id as Task["status"]) ? event.over.id as Task["status"] : null);
+    if (!targetStatus) return;
+
+    const targetTasks = tasks.filter((candidate) => candidate.status === targetStatus);
+    const targetIndex = overTask ? targetTasks.findIndex((candidate) => candidate.id === overTask.id) : targetTasks.length;
+    if (targetIndex < 0) return;
+    void moveTask(task, targetStatus, targetIndex);
   }
 
   const visibleTasks = tasks.filter((task) =>
@@ -313,9 +382,9 @@ export default function TasksPage() {
           <p>Create a task from one of your projects to start the work queue.</p>
         </div>
       ) : (
-        <DndContext onDragEnd={handleDragEnd}>
+        <DndContext collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
           <div className={styles.kanbanBoard}>
-            {taskStatuses.map((status) => <DroppableColumn key={status} status={status} tasks={visibleTasks.filter((task) => task.status === status)} onAdd={openCreateTask} onEdit={openEditTask} onDelete={(task) => void deleteTask(task)} onToggle={(task) => void updateStatus(task, task.status === "DONE" ? "TODO" : "DONE")} />)}
+            {taskStatuses.map((status) => <DroppableColumn key={status} status={status} tasks={visibleTasks.filter((task) => task.status === status)} onAdd={openCreateTask} onEdit={openEditTask} onDelete={(task) => void deleteTask(task)} onToggle={(task) => void updateStatus(task, task.status === "DONE" ? "TODO" : "DONE")} onDetails={setSelectedTask} />)}
           </div>
         </DndContext>
       )}
@@ -338,6 +407,33 @@ export default function TasksPage() {
               </div>
               <div className={styles.formRow}><label htmlFor="task-project">Project</label><select id="task-project" value={projectId} onChange={(event) => setProjectId(event.target.value)}>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></div>
               <div className={styles.modalFooter}><button type="button" className={styles.secondaryAction} onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className={styles.primaryAction} disabled={isSubmitting}>{isSubmitting ? "Saving..." : editingTask ? "Save task" : "Create task"}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {selectedTask && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true" aria-labelledby="task-details-title" onClick={(event) => { if (event.target === event.currentTarget) setSelectedTask(null); }}>
+          <div className={styles.modalSheet}>
+            <div className={styles.modalHeader}>
+              <div><p className={styles.overline}>TASK DETAILS</p><h3 id="task-details-title">{selectedTask.title}</h3></div>
+              <button type="button" className={styles.closeBtn} onClick={() => setSelectedTask(null)} aria-label="Close task details"><X size={16} /></button>
+            </div>
+            <div className={styles.taskDetailsMeta}>
+              <span className={`${styles.taskPriority} ${styles[`taskPriority${selectedTask.priority}`]}`}>{selectedTask.priority}</span>
+              <span>{statusLabels[selectedTask.status]}</span>
+              <span>{selectedTask.project.name}</span>
+            </div>
+            <p className={styles.taskDetailsDescription}>{selectedTask.description || "No description provided."}</p>
+            <div className={styles.taskComments}>
+              <div className={styles.taskCommentsHeader}><strong>Comments</strong><span>{selectedTask.comments?.length ?? 0}</span></div>
+              {selectedTask.comments?.length ? selectedTask.comments.map((comment) => (
+                <div className={styles.taskComment} key={comment.id}><strong>{[comment.user?.firstName, comment.user?.lastName].filter(Boolean).join(" ") || comment.user?.email || "Team member"}</strong><p>{comment.body}</p></div>
+              )) : <p className={styles.kanbanEmpty}>No comments yet.</p>}
+            </div>
+            <form className={styles.commentForm} onSubmit={addComment}>
+              <textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder="Add a comment..." aria-label="Comment" />
+              <button type="submit" className={styles.primaryAction} disabled={isCommentSubmitting || !commentBody.trim()}>{isCommentSubmitting ? "Adding..." : "Add comment"}</button>
             </form>
           </div>
         </div>
